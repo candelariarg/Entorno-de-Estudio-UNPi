@@ -1,6 +1,3 @@
-#Le pedí a la IA Claude que me de un codigo para un modo oscuro.
-#Mi prompt fue: "Quiero un codigo para un modo oscuro en python con wxpython, que se pueda activar y desactivar con un boton, y que cambie el fondo de la ventana y el color de los textos."
-
 import wx
  
 # Paletas de colores
