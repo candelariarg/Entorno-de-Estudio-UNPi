@@ -1,70 +1,82 @@
-#SQLite con Python.
-#Le pedí a la IA Claude que me de un codigo para una base de datos con SQLite en Python.
-#Mi prompt fue: "Quiero saber como conecto mi aplicación para escritorio (desarrollada con python y su libreria wxPython) con SQLite. Ya que quiero "armar" una base de datos con un hisorial de apuntes, guardar fechas que se marcan en el calendario, guardar detalles de las materias que el alumno escribio, archivos subidos desde el escritorio, etc."
-
-#Respuesta: Aquí te explico cómo conectar tu aplicación wxPython con SQLite, con un diseño pensado para lo que describís (apuntes, calendario, materias, archivos).
-#La integración se hace con el módulo sqlite3 de Python, que ya viene incluido sin instalar nada extra. La idea central es tener una clase DatabaseManager que centralice todas las operaciones.
-
 import sqlite3
 import os
-from datetime import datetime
 
 class DatabaseManager:
-    def __init__(self, db_path="apuntes.db"):
+    def __init__(self, db_path="entorno_estudio.db"):
         self.db_path = db_path
-        self.conn = None
-        self.cursor = None
-        self.conectar()
-        self.crear_tablas()
-
-    def conectar(self):
-        # check_same_thread=False es necesario en wxPython
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row  # devuelve filas como diccionarios
+        self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
+        self.crear_tablas()
 
     def crear_tablas(self):
         self.cursor.executescript("""
+            CREATE TABLE IF NOT EXISTS apuntes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                metodo TEXT NOT NULL,
+                contenido_xml TEXT,
+                fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS materias (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 nombre      TEXT NOT NULL,
-                color       TEXT DEFAULT '#4A90D9',
-                descripcion TEXT
+                profesor    TEXT DEFAULT 'No asignado',
+                link_clases TEXT DEFAULT '-',
+                horario     TEXT DEFAULT '-',
+                estado      TEXT DEFAULT 'Cursando'
             );
 
-            CREATE TABLE IF NOT EXISTS apuntes (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                materia_id     INTEGER REFERENCES materias(id) ON DELETE CASCADE,
-                titulo         TEXT NOT NULL,
-                contenido      TEXT,
-                fecha_creacion TEXT DEFAULT (datetime('now','localtime')),
-                fecha_mod      TEXT DEFAULT (datetime('now','localtime'))
-            );
-
-            CREATE TABLE IF NOT EXISTS calendario (
+            CREATE TABLE IF NOT EXISTS materiales_clase (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 materia_id INTEGER REFERENCES materias(id) ON DELETE CASCADE,
-                fecha      TEXT NOT NULL,
-                titulo     TEXT NOT NULL,
-                tipo       TEXT CHECK(tipo IN ('examen','entrega','clase','otro'))
-            );
-
-            CREATE TABLE IF NOT EXISTS archivos (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                apunte_id  INTEGER REFERENCES apuntes(id) ON DELETE CASCADE,
                 nombre     TEXT NOT NULL,
                 ruta       TEXT NOT NULL,
-                tamaño     INTEGER,
-                fecha_sub  TEXT DEFAULT (datetime('now','localtime'))
+                tipo       TEXT,
+                fecha_sub  TEXT DEFAULT (date('now','localtime'))
+            );
+
+            CREATE TABLE IF NOT EXISTS planificacion (
+                id     INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo TEXT NOT NULL,
+                columna INTEGER,
+                fila    INTEGER,
+                color  TEXT
             );
         """)
         self.conn.commit()
 
-    # ── MATERIAS ──────────────────────────────────────────
-    def agregar_materia(self, nombre, color="#4A90D9", descripcion=""):
+    # --- CRUD Apuntes ---
+    def guardar_apunte(self, nombre, metodo, xml):
+        self.cursor.execute("INSERT INTO apuntes (nombre, metodo, contenido_xml) VALUES (?, ?, ?)", (nombre, metodo, xml))
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def obtener_apuntes(self):
+        self.cursor.execute("SELECT * FROM apuntes ORDER BY fecha_creacion DESC")
+        return self.cursor.fetchall()
+
+    def actualizar_apunte(self, apunte_id, nombre, contenido_xml):
         self.cursor.execute(
-            "INSERT INTO materias (nombre, color, descripcion) VALUES (?, ?, ?)",
-            (nombre, color, descripcion)
+            "UPDATE apuntes SET nombre=?, contenido_xml=? WHERE id=?",
+            (nombre, contenido_xml, apunte_id)
+        )
+        self.conn.commit()
+
+    def eliminar_apunte(self, apunte_id):
+        self.cursor.execute("DELETE FROM apuntes WHERE id=?", (apunte_id,))
+        self.conn.commit()
+
+    def renombrar_apunte(self, apunte_id, nuevo_nombre):
+        self.cursor.execute("UPDATE apuntes SET nombre=? WHERE id=?", (nuevo_nombre, apunte_id))
+        self.conn.commit()
+
+    # --- CRUD Materias ---
+    def agregar_materia(self, nombre, profesor, link, horario, estado="Cursando"):
+        self.cursor.execute(
+            "INSERT INTO materias (nombre, profesor, link_clases, horario, estado) VALUES (?, ?, ?, ?, ?)",
+            (nombre, profesor, link, horario, estado)
         )
         self.conn.commit()
         return self.cursor.lastrowid
@@ -72,69 +84,48 @@ class DatabaseManager:
     def obtener_materias(self):
         self.cursor.execute("SELECT * FROM materias ORDER BY nombre")
         return self.cursor.fetchall()
-
-    # ── APUNTES ───────────────────────────────────────────
-    def agregar_apunte(self, materia_id, titulo, contenido=""):
-        self.cursor.execute(
-            "INSERT INTO apuntes (materia_id, titulo, contenido) VALUES (?, ?, ?)",
-            (materia_id, titulo, contenido)
-        )
-        self.conn.commit()
-        return self.cursor.lastrowid
-
-    def obtener_apuntes(self, materia_id=None):
-        if materia_id:
-            self.cursor.execute(
-                "SELECT * FROM apuntes WHERE materia_id=? ORDER BY fecha_mod DESC",
-                (materia_id,)
-            )
-        else:
-            self.cursor.execute("SELECT * FROM apuntes ORDER BY fecha_mod DESC")
-        return self.cursor.fetchall()
-
-    def actualizar_apunte(self, apunte_id, titulo, contenido):
-        self.cursor.execute(
-            """UPDATE apuntes SET titulo=?, contenido=?,
-               fecha_mod=datetime('now','localtime') WHERE id=?""",
-            (titulo, contenido, apunte_id)
-        )
-        self.conn.commit()
-
-    # ── CALENDARIO ────────────────────────────────────────
-    def agregar_evento(self, materia_id, fecha, titulo, tipo="otro"):
-        self.cursor.execute(
-            "INSERT INTO calendario (materia_id, fecha, titulo, tipo) VALUES (?,?,?,?)",
-            (materia_id, fecha, titulo, tipo)
-        )
-        self.conn.commit()
-        return self.cursor.lastrowid
-
-    def obtener_eventos_por_fecha(self, fecha):
-        # fecha en formato 'YYYY-MM-DD'
-        self.cursor.execute(
-            "SELECT * FROM calendario WHERE fecha=? ORDER BY tipo",
-            (fecha,)
-        )
-        return self.cursor.fetchall()
-
-    # ── ARCHIVOS ──────────────────────────────────────────
-    def adjuntar_archivo(self, apunte_id, ruta_archivo):
+        
+    def agregar_material(self, materia_id, ruta_archivo):
         nombre = os.path.basename(ruta_archivo)
-        tamaño = os.path.getsize(ruta_archivo)
+        ext = os.path.splitext(nombre)[1].replace('.', '').upper()
+        self.cursor.execute("INSERT INTO materiales_clase (materia_id, nombre, ruta, tipo) VALUES (?, ?, ?, ?)",
+                            (materia_id, nombre, ruta_archivo, ext if ext else "DOC"))
+        self.conn.commit()
+
+    def obtener_materiales(self, materia_id):
+        self.cursor.execute("SELECT * FROM materiales_clase WHERE materia_id=? ORDER BY id DESC", (materia_id,))
+        return self.cursor.fetchall()
+
+    def actualizar_materia(self, materia_id, nombre, profesor, link, horario):
         self.cursor.execute(
-            "INSERT INTO archivos (apunte_id, nombre, ruta, tamaño) VALUES (?,?,?,?)",
-            (apunte_id, nombre, ruta_archivo, tamaño)
+            "UPDATE materias SET nombre=?, profesor=?, link_clases=?, horario=? WHERE id=?",
+            (nombre, profesor, link, horario, materia_id)
         )
+        self.conn.commit()
+
+    def eliminar_materia(self, materia_id):
+        self.cursor.execute("DELETE FROM materias WHERE id=?", (materia_id,))
+        self.conn.commit()
+
+    def eliminar_material(self, material_id):
+        self.cursor.execute("DELETE FROM materiales_clase WHERE id=?", (material_id,))
+        self.conn.commit()
+
+    # --- CRUD Planner ---
+    def guardar_bloque_planner(self, titulo, columna, fila, color):
+        self.cursor.execute("INSERT INTO planificacion (titulo, columna, fila, color) VALUES (?, ?, ?, ?)", 
+                            (titulo, columna, fila, color))
         self.conn.commit()
         return self.cursor.lastrowid
 
-    def obtener_archivos(self, apunte_id):
-        self.cursor.execute(
-            "SELECT * FROM archivos WHERE apunte_id=?",
-            (apunte_id,)
-        )
-        return self.cursor.fetchall()
+    def actualizar_bloque_planner(self, id, columna, fila):
+        self.cursor.execute("UPDATE planificacion SET columna=?, fila=? WHERE id=?", (columna, fila, id))
+        self.conn.commit()
 
-    def cerrar(self):
-        if self.conn:
-            self.conn.close()
+    def borrar_bloque_planner(self, bloque_id):
+        self.cursor.execute("DELETE FROM planificacion WHERE id=?", (bloque_id,))
+        self.conn.commit()
+
+    def obtener_bloques_planner(self):
+        self.cursor.execute("SELECT * FROM planificacion")
+        return self.cursor.fetchall()

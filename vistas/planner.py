@@ -1,152 +1,233 @@
 import wx
-import wx.grid as gridlib
+from utils import exportar_planner_pdf, HORARIOS
 
-# --- PALETA DE COLORES ---
-COLOR_NAVY = wx.Colour(17, 46, 107)    
-COLOR_BLUE = wx.Colour(0, 85, 150)     
-COLOR_BG = wx.Colour(245, 245, 245)    
-COLOR_WHITE = wx.Colour(255, 255, 255)
+class DraggableBlock(wx.Panel):
+    def __init__(self, parent, db_id, label, col, row, color, db_manager):
+        super().__init__(parent, style=wx.BORDER_SIMPLE)
+        self.db_id = db_id
+        self.color_hex = color
+        self.label = label
+        self.col = col
+        self.row = row
+        self.db = db_manager
+        
+        self.SetBackgroundColour(wx.Colour(color))
+        
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.text = wx.StaticText(self, label=label)
+        self.text.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        # Mantenemos el texto negro para contrastar con los colores que elige el usuario
+        self.text.SetForegroundColour(wx.BLACK)
+        sizer.Add(self.text, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 4)
+        self.SetSizer(sizer)
+        
+        self.dragging = False
+        self.offset = (0, 0)
+        
+        for el in (self, self.text):
+            el.Bind(wx.EVT_LEFT_DOWN, self.OnDown)
+            el.Bind(wx.EVT_LEFT_UP, self.OnUp)
+            el.Bind(wx.EVT_MOTION, self.OnMotion)
+            el.Bind(wx.EVT_RIGHT_DOWN, self.OnRightClick)
 
-class PlannerPanel(wx.Frame):
-    def __init__(self):
-        super().__init__(parent=None, title="Planner Semanal", size=(1000, 650))
-        
-        main_panel = wx.Panel(self)
-        main_panel.SetBackgroundColour(COLOR_BG)
-        main_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        
-        # ==========================================
-        # 1. PANEL IZQUIERDO: CAJA DE BLOQUES (TUS ACTIVIDADES)
-        # ==========================================
-        left_panel = wx.Panel(main_panel)
-        left_panel.SetBackgroundColour(COLOR_WHITE)
-        left_sizer = wx.BoxSizer(wx.VERTICAL)
-        
-        lbl_titulo = wx.StaticText(left_panel, label="Mis Bloques")
-        lbl_titulo.SetForegroundColour(COLOR_NAVY)
-        font_titulo = lbl_titulo.GetFont()
-        font_titulo.SetPointSize(14)
-        font_titulo.MakeBold()
-        lbl_titulo.SetFont(font_titulo)
-        left_sizer.Add(lbl_titulo, 0, wx.ALL, 15)
-        
-        # Simulación de los bloques de colores arrastrables
-        actividades = [
-            ("Clases UNPilar", wx.Colour(0, 85, 150)),       # Azul
-            ("Tutorías Privadas", wx.Colour(46, 139, 87)),   # Verde
-            ("Turno Trabajo", wx.Colour(210, 105, 30)),    # Naranja
-            ("Gimnasio", wx.Colour(138, 43, 226)),           # Violeta
-            ("Estudio App", wx.Colour(220, 20, 60))          # Rojo
-        ]
-        
-        for nombre, color in actividades:
-            bloque = wx.Panel(left_panel, size=(180, 40))
-            bloque.SetBackgroundColour(color)
-            bloque_sizer = wx.BoxSizer(wx.VERTICAL)
-            texto = wx.StaticText(bloque, label=nombre)
-            texto.SetForegroundColour(COLOR_WHITE)
-            bloque_sizer.Add(texto, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-            bloque.SetSizer(bloque_sizer)
-            left_sizer.Add(bloque, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+    def OnRightClick(self, event):
+        """Elimina la tarea tanto de la pantalla como de la base de datos."""
+        if wx.MessageBox(f"¿Quieres eliminar la actividad '{self.label}'?", "Eliminar Bloque", wx.YES_NO | wx.ICON_QUESTION) == wx.YES:
+            self.db.borrar_bloque_planner(self.db_id)
+            self.Destroy()
+
+    def OnDown(self, event):
+        self.dragging = True
+        self.Raise()
+        obj = event.GetEventObject()
+        if obj == self.text:
+            pos_in_screen = self.text.ClientToScreen(event.GetPosition())
+            self.offset = self.ScreenToClient(pos_in_screen)
+        else:
+            self.offset = event.GetPosition()
+        if not self.HasCapture(): self.CaptureMouse()
+
+    def OnUp(self, event):
+        """Ajusta el bloque de forma inteligente dentro de los límites horarios lógicos."""
+        if self.dragging:
+            self.dragging = False
+            if self.HasCapture(): self.ReleaseMouse()
             
-        # Botón para añadir nuevo bloque
-        btn_nuevo = wx.Button(left_panel, label="+ Nuevo Bloque")
-        left_sizer.Add(btn_nuevo, 0, wx.ALL | wx.EXPAND, 10)
+            parent = self.GetParent()
+            w, h = parent.GetSize()
+            
+            margin_left = 60
+            margin_top = 30
+            col_w = (w - margin_left) // 7
+            row_h = (h - margin_top) // len(HORARIOS)
+            
+            x, y = self.GetPosition()
+            
+            self.col = max(0, min(round((x - margin_left) / col_w), 6))
+            self.row = max(0, min(round((y - margin_top) / row_h), len(HORARIOS) - 1))
+            
+            self.ajustar_posicion_grilla(col_w, row_h, margin_left, margin_top)
+            self.db.actualizar_bloque_planner(self.db_id, self.col, self.row)
+
+    def ajustar_posicion_grilla(self, col_w, row_h, margin_left, margin_top):
+        snap_x = margin_left + (self.col * col_w) + 2
+        snap_y = margin_top + (self.row * row_h) + 2
+        self.SetSize((col_w - 4, row_h - 4))
+        self.SetPosition((snap_x, snap_y))
+        self.Layout()
+
+    def OnMotion(self, event):
+        if self.dragging and event.Dragging() and event.LeftIsDown():
+            screen_pos = event.GetEventObject().ClientToScreen(event.GetPosition())
+            parent_pos = self.GetParent().ScreenToClient(screen_pos)
+            self.SetPosition((parent_pos.x - self.offset.x, parent_pos.y - self.offset.y))
+
+
+class PanelPlanner(wx.Panel):
+    def __init__(self, parent, db):
+        super().__init__(parent)
+        self.db = db
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         
-        left_panel.SetSizer(left_sizer)
+        toolbar = wx.BoxSizer(wx.HORIZONTAL)
         
-        # ==========================================
-        # 2. PANEL DERECHO: LA GRILLA SEMANAL Y EXPORTACIÓN
-        # ==========================================
-        right_panel = wx.Panel(main_panel)
-        right_sizer = wx.BoxSizer(wx.VERTICAL)
+        btn_nuevo = wx.Button(self, label=" Crear Bloque Actividad")
+        btn_nuevo.SetBitmap(wx.ArtProvider.GetBitmap(wx.ART_PLUS, wx.ART_BUTTON, (16, 16)))
         
-        # Barra superior con el botón de exportar
-        top_bar = wx.BoxSizer(wx.HORIZONTAL)
-        lbl_semana = wx.StaticText(right_panel, label="Planificación de la Semana")
-        lbl_semana.SetFont(font_titulo)
-        lbl_semana.SetForegroundColour(COLOR_NAVY)
+        btn_pdf = wx.Button(self, label=" Exportar a PDF")
+        btn_pdf.SetBitmap(wx.ArtProvider.GetBitmap(wx.ART_PRINT, wx.ART_BUTTON, (16, 16)))
         
-        btn_exportar = wx.Button(right_panel, label="📥 Descargar PDF")
-        btn_exportar.SetBackgroundColour(COLOR_BLUE)
-        btn_exportar.SetForegroundColour(COLOR_WHITE)
-        btn_exportar.Bind(wx.EVT_BUTTON, self.on_exportar)
+        lbl_info = wx.StaticText(self, label=" (Clic derecho sobre un bloque para eliminarlo)")
+        lbl_info.SetForegroundColour(wx.Colour(120, 120, 120))
         
-        top_bar.Add(lbl_semana, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 15)
-        top_bar.Add(btn_exportar, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 15)
+        toolbar.Add(btn_nuevo, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        toolbar.Add(btn_pdf, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        toolbar.Add(lbl_info, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
         
-        # La Grilla del Calendario
-        self.grid = gridlib.Grid(right_panel)
-        self.grid.CreateGrid(15, 7) # 15 filas (horarios), 7 columnas (días)
+        self.canvas = wx.Panel(self)
+        self.canvas.Bind(wx.EVT_PAINT, self.on_paint)
+        self.canvas.Bind(wx.EVT_SIZE, self.on_resize)
+        # Evita el parpadeo en Windows/Linux al redibujar
+        self.canvas.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+        
+        self.sizer.Add(toolbar, 0, wx.EXPAND | wx.ALL, 5)
+        self.sizer.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 5)
+        self.SetSizer(self.sizer)
+        
+        btn_nuevo.Bind(wx.EVT_BUTTON, self.on_nuevo_bloque)
+        btn_pdf.Bind(wx.EVT_BUTTON, self.on_exportar_pdf)
+        
+        wx.CallAfter(self.cargar_bloques_desde_bd)
+
+    def cargar_bloques_desde_bd(self):
+        w, h = self.canvas.GetSize()
+        margin_left = 60
+        margin_top = 30
+        col_w = (w - margin_left) // 7
+        row_h = (h - margin_top) // len(HORARIOS)
+        
+        for b in self.db.obtener_bloques_planner():
+            bloque = DraggableBlock(self.canvas, b['id'], b['titulo'], b['columna'], b['fila'], b['color'], self.db)
+            bloque.ajustar_posicion_grilla(col_w, row_h, margin_left, margin_top)
+        self.canvas.Refresh()
+
+    def on_resize(self, event):
+        w, h = self.canvas.GetSize()
+        margin_left = 60
+        margin_top = 30
+        col_w = (w - margin_left) // 7
+        row_h = (h - margin_top) // len(HORARIOS)
+        
+        for child in self.canvas.GetChildren():
+            if isinstance(child, DraggableBlock):
+                child.ajustar_posicion_grilla(col_w, row_h, margin_left, margin_top)
+        event.Skip()
+        self.canvas.Refresh()
+
+    def on_paint(self, event):
+        # Usamos AutoBufferedPaintDC para evitar el parpadeo negro
+        dc = wx.AutoBufferedPaintDC(self.canvas)
+        
+        # Detectar de forma segura si estamos en modo oscuro
+        try:
+            es_oscuro = wx.GetTopLevelParent(self).es_oscuro
+        except AttributeError:
+            es_oscuro = False
+            
+        # --- PALETA DINÁMICA DE LA GRILLA ---
+        bg_grid = wx.Colour(35, 35, 35) if es_oscuro else wx.WHITE
+        bg_header = wx.Colour(50, 60, 80) if es_oscuro else wx.Colour(230, 240, 255)
+        bg_time = wx.Colour(45, 45, 45) if es_oscuro else wx.Colour(240, 240, 240)
+        line_color = wx.Colour(70, 70, 70) if es_oscuro else wx.Colour(220, 220, 220)
+        text_color = wx.Colour(230, 230, 230) if es_oscuro else wx.BLACK
+        
+        # Pintar el fondo base
+        w, h = self.canvas.GetSize()
+        dc.SetBrush(wx.Brush(bg_grid))
+        dc.SetPen(wx.TRANSPARENT_PEN)
+        dc.DrawRectangle(0, 0, w, h)
+        
+        margin_left = 60
+        margin_top = 30
+        
+        col_w = (w - margin_left) // 7
+        row_h = (h - margin_top) // len(HORARIOS)
         
         dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        dc.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        dc.SetTextForeground(text_color)
+        
+        # 1. Dibujar Cabeceras de Días
         for i, dia in enumerate(dias):
-            self.grid.SetColLabelValue(i, dia)
-            self.grid.SetColSize(i, 100) # Ancho de columnas
+            x = margin_left + i * col_w
+            dc.SetBrush(wx.Brush(bg_header))
+            dc.SetPen(wx.Pen(line_color, 1))
+            dc.DrawRectangle(x, 0, col_w, margin_top)
+            dc.DrawText(dia, x + 15, 8)
+            dc.DrawLine(x, margin_top, x, h)
+
+        # 2. Dibujar Columna de Referencia de Horas
+        for j, hora in enumerate(HORARIOS):
+            y = margin_top + j * row_h
+            dc.SetBrush(wx.Brush(bg_time))
+            dc.DrawRectangle(0, y, margin_left, row_h)
+            dc.DrawText(hora, 10, y + (row_h // 2) - 6)
             
-        horarios = [f"{h}:00" for h in range(8, 23)] # De 8hs a 22hs
-        for i, hora in enumerate(horarios):
-            self.grid.SetRowLabelValue(i, hora)
+            dc.SetPen(wx.Pen(line_color, 1))
+            dc.DrawLine(margin_left, y, w, y)
+
+    def on_nuevo_bloque(self, event):
+        titulo = wx.GetTextFromUser("Asignar Nombre a la Actividad:", "Nueva Actividad")
+        if titulo.strip():
+            color_elegido = wx.GetColourFromUser(self, wx.Colour(108, 160, 209))
+            if not color_elegido.IsOk(): return
             
-        # Configuraciones estéticas de la grilla
-        self.grid.DisableDragColSize()
-        self.grid.DisableDragRowSize()
-        self.grid.SetDefaultCellAlignment(wx.ALIGN_CENTER, wx.ALIGN_CENTER)
-        
-        # Ejemplo: Pintando un bloque manualmente (simulando que se arrastró algo ahí)
-        self.grid.SetCellValue(2, 0, "UNPilar") # Lunes 10:00
-        self.grid.SetCellBackgroundColour(2, 0, wx.Colour(0, 85, 150))
-        self.grid.SetCellTextColour(2, 0, COLOR_WHITE)
-        
-        self.grid.SetCellValue(10, 1, "Gimnasio") # Martes 18:00
-        self.grid.SetCellBackgroundColour(10, 1, wx.Colour(138, 43, 226))
-        self.grid.SetCellTextColour(10, 1, COLOR_WHITE)
+            color_hex = color_elegido.GetAsString(wx.C2S_HTML_SYNTAX)
+            
+            w, h = self.canvas.GetSize()
+            margin_left = 60
+            margin_top = 30
+            col_w = (w - margin_left) // 7
+            row_h = (h - margin_top) // len(HORARIOS)
+            
+            db_id = self.db.guardar_bloque_planner(titulo, 0, 0, color_hex)
+            
+            b = DraggableBlock(self.canvas, db_id, titulo, 0, 0, color_hex, self.db)
+            b.ajustar_posicion_grilla(col_w, row_h, margin_left, margin_top)
+            self.canvas.Refresh()
 
-        right_sizer.Add(top_bar, 0, wx.EXPAND)
-        right_sizer.Add(self.grid, 1, wx.ALL | wx.EXPAND, 15)
-        
-        right_panel.SetSizer(right_sizer)
-        
-        # ==========================================
-        # ENSAMBLAJE FINAL
-        # ==========================================
-        main_sizer.Add(left_panel, 0, wx.EXPAND | wx.ALL, 10)
-        main_sizer.Add(right_panel, 1, wx.EXPAND | wx.ALL, 10)
-        
-        main_panel.SetSizer(main_sizer)
-        self.Center()
-        self.Show()
-
-def on_exportar(self, event):
-    from reportlab.pdfgen import canvas
-    import os
-
-    ruta = os.path.expanduser("~/Desktop/planner_semanal.pdf")
-    c = canvas.Canvas(ruta)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(100, 800, "Planificación de la Semana")
-    c.setFont("Helvetica", 10)
-
-    dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-    x_inicio = 100
-    ancho_col = 70
-    for i, dia in enumerate(dias):
-        c.drawString(x_inicio + i * ancho_col, 770, dia)
-
-    # Iterar sobre la grilla para exportar los valores
-    for fila in range(self.grid.GetNumberRows()):
-        hora = self.grid.GetRowLabelValue(fila)
-        for col in range(self.grid.GetNumberCols()):
-            valor = self.grid.GetCellValue(fila, col)
-            if valor:
-                x = x_inicio + col * ancho_col
-                y = 750 - fila * 20
-                c.drawString(x, y, f"{hora}: {valor}")
-
-    c.save()
-    wx.MessageBox(f"PDF guardado en:\n{ruta}", "Exportación exitosa", wx.OK | wx.ICON_INFORMATION)
-    
-if __name__ == '__main__':
-    app = wx.App()
-    frame = PlannerPanel()
-    app.MainLoop()
+    def on_exportar_pdf(self, event):
+        with wx.FileDialog(self, "Exportar Cronograma en PDF", wildcard="PDF (*.pdf)|*.pdf", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                bloques_lista = []
+                for child in self.canvas.GetChildren():
+                    if isinstance(child, DraggableBlock):
+                        bloques_lista.append({
+                            'titulo': child.label,
+                            'columna': child.col,
+                            'fila': child.row,
+                            'color': child.color_hex
+                        })
+                
+                exportar_planner_pdf(dlg.GetPath(), bloques_lista)
+                wx.MessageBox("Tu archivo PDF se ha descargado y coincide exactamente con tu diseño.", "Éxito")

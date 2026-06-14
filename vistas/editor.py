@@ -1,280 +1,341 @@
 import wx
 import wx.richtext as rt
-from database import DatabaseManager
- 
-COLOR_NAVY  = wx.Colour(17, 46, 107)
-COLOR_BLUE  = wx.Colour(0, 85, 150)
-COLOR_BG    = wx.Colour(245, 245, 245)
-COLOR_WHITE = wx.Colour(255, 255, 255)
- 
- 
-class EditorEstudio(wx.Frame):
-    def __init__(self, parent, tema):
-        super().__init__(parent, title=f"Estudiando: {tema}", size=(950, 650))
-        self.tema = tema
-        self.db = DatabaseManager("datos/apuntes.db")
- 
-        # Registrar handlers de richtext (necesario una sola vez)
-        self._registrar_handlers()
- 
-        main_panel = wx.Panel(self)
-        main_panel.SetBackgroundColour(COLOR_BG)
+import io
+
+rt.RichTextBuffer.AddHandler(rt.RichTextXMLHandler())
+
+# ==========================================
+# DIÁLOGO DE IMAGEN (TU FUNCIÓN PERSONALIZADA)
+# ==========================================
+class DialogoAjusteImagen(wx.Dialog):
+    def __init__(self, parent, img):
+        super().__init__(parent, title="Ajustar Tamaño de Imagen")
+        self.img = img
+        self.escala = 100
+        
         sizer = wx.BoxSizer(wx.VERTICAL)
- 
-        # ── Encabezado ───────────────────────────────────────
-        lbl = wx.StaticText(main_panel, label=f"Tema: {tema}")
-        lbl.SetForegroundColour(COLOR_BLUE)
-        font = lbl.GetFont()
-        font.SetPointSize(14)
-        font.MakeBold()
-        lbl.SetFont(font)
- 
-        instruccion = wx.StaticText(
-            main_panel,
-            label="Escribí todo lo que sabés sobre este tema sin mirar ningún apunte:"
-        )
-        instruccion.SetForegroundColour(wx.Colour(100, 100, 100))
- 
-        # ── Barra de herramientas de formato ─────────────────
-        toolbar_panel = wx.Panel(main_panel)
-        toolbar_panel.SetBackgroundColour(wx.Colour(230, 235, 245))
-        toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
- 
-        def make_btn(label, tooltip, handler, is_toggle=False):
-            if is_toggle:
-                btn = wx.ToggleButton(toolbar_panel, label=label, size=(36, 30))
-            else:
-                btn = wx.Button(toolbar_panel, label=label, size=(36, 30))
-            btn.SetToolTip(tooltip)
-            btn.Bind(wx.EVT_TOGGLEBUTTON if is_toggle else wx.EVT_BUTTON, handler)
-            return btn
- 
-        self.btn_bold      = make_btn("N",  "Negrita (Ctrl+B)",    self.on_bold,       is_toggle=True)
-        self.btn_italic    = make_btn("K",  "Cursiva (Ctrl+I)",    self.on_italic,     is_toggle=True)
-        self.btn_underline = make_btn("S",  "Subrayado (Ctrl+U)",  self.on_underline,  is_toggle=True)
- 
-        # Hacemos las letras representativas con estilos visuales
-        font_n = self.btn_bold.GetFont(); font_n.MakeBold(); self.btn_bold.SetFont(font_n)
-        font_k = self.btn_italic.GetFont(); font_k.MakeItalic(); self.btn_italic.SetFont(font_k)
-        font_s = self.btn_underline.GetFont()
-        self.btn_underline.SetFont(font_s)
- 
-        sep1 = wx.StaticLine(toolbar_panel, style=wx.LI_VERTICAL, size=(1, 24))
- 
-        self.btn_left   = make_btn("≡←", "Alinear izquierda",  self.on_align_left,   is_toggle=True)
-        self.btn_center = make_btn("≡≡", "Centrar",            self.on_align_center, is_toggle=True)
-        self.btn_right  = make_btn("≡→", "Alinear derecha",    self.on_align_right,  is_toggle=True)
- 
-        sep2 = wx.StaticLine(toolbar_panel, style=wx.LI_VERTICAL, size=(1, 24))
- 
-        btn_indent_more = make_btn("→|", "Aumentar sangría",   self.on_indent_more)
-        btn_indent_less = make_btn("|←", "Reducir sangría",    self.on_indent_less)
- 
-        sep3 = wx.StaticLine(toolbar_panel, style=wx.LI_VERTICAL, size=(1, 24))
- 
-        btn_font   = make_btn("Aa",  "Elegir fuente",     self.on_font)
-        btn_color  = make_btn("🎨",  "Color de texto",    self.on_color)
- 
-        sep4 = wx.StaticLine(toolbar_panel, style=wx.LI_VERTICAL, size=(1, 24))
- 
-        btn_undo = make_btn("↩", "Deshacer (Ctrl+Z)", self.on_undo)
-        btn_redo = make_btn("↪", "Rehacer (Ctrl+Y)",  self.on_redo)
- 
-        for w in [self.btn_bold, self.btn_italic, self.btn_underline, sep1,
-                  self.btn_left, self.btn_center, self.btn_right, sep2,
-                  btn_indent_more, btn_indent_less, sep3,
-                  btn_font, btn_color, sep4,
-                  btn_undo, btn_redo]:
-            flag = wx.ALIGN_CENTER_VERTICAL | wx.LEFT
-            toolbar_sizer.Add(w, 0, flag, 5)
- 
-        toolbar_panel.SetSizer(toolbar_sizer)
- 
-        # ── RichTextCtrl (área de escritura) ─────────────────
-        self.rtc = rt.RichTextCtrl(
-            main_panel,
-            style=wx.VSCROLL | wx.HSCROLL | wx.NO_BORDER | wx.TE_MULTILINE
-        )
-        self.rtc.SetMinSize((-1, 380))
- 
-        # Fuente base agradable para escribir apuntes
-        default_font = wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
-                               wx.FONTWEIGHT_NORMAL, faceName="Segoe UI")
-        self.rtc.SetFont(default_font)
-        self.rtc.SetBackgroundColour(COLOR_WHITE)
- 
-        # Actualizar estado de botones al mover el cursor
-        self.rtc.Bind(wx.EVT_KEY_UP,        self._actualizar_toolbar)
-        self.rtc.Bind(wx.EVT_LEFT_UP,       self._actualizar_toolbar)
-        self.rtc.Bind(rt.EVT_RICHTEXT_CHARACTER, self._actualizar_toolbar)
- 
-        # ── Botones inferiores ────────────────────────────────
-        btn_guardar = wx.Button(main_panel, label="💾 Guardar Apunte")
-        btn_guardar.SetBackgroundColour(COLOR_BLUE)
-        btn_guardar.SetForegroundColour(COLOR_WHITE)
-        btn_guardar.Bind(wx.EVT_BUTTON, self.guardar)
- 
-        btn_limpiar = wx.Button(main_panel, label="🗑 Limpiar")
-        btn_limpiar.Bind(wx.EVT_BUTTON, self.limpiar)
- 
-        btn_cerrar = wx.Button(main_panel, label="Cerrar")
-        btn_cerrar.Bind(wx.EVT_BUTTON, lambda e: self.Close())
- 
+        lbl_titulo = wx.StaticText(self, label="Ajusta la imagen antes de insertarla:")
+        lbl_titulo.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        sizer.Add(lbl_titulo, 0, wx.ALL | wx.ALIGN_CENTER, 15)
+        
+        self.lbl_info = wx.StaticText(self, label=f"Tamaño original: {img.GetWidth()} x {img.GetHeight()} px")
+        sizer.Add(self.lbl_info, 0, wx.ALL | wx.ALIGN_CENTER, 5)
+        
+        self.slider = wx.Slider(self, value=100, minValue=10, maxValue=300, style=wx.SL_HORIZONTAL | wx.SL_LABELS)
+        self.slider.Bind(wx.EVT_SLIDER, self.on_slide)
+        sizer.Add(self.slider, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 20)
+        
+        self.lbl_preview = wx.StaticText(self, label=f"Tamaño final: {img.GetWidth()} x {img.GetHeight()} px")
+        self.lbl_preview.SetForegroundColour(wx.Colour(0, 100, 200))
+        self.lbl_preview.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        sizer.Add(self.lbl_preview, 0, wx.ALL | wx.ALIGN_CENTER, 15)
+        
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        btn_sizer.Add(btn_limpiar,  0, wx.RIGHT, 10)
-        btn_sizer.AddStretchSpacer()
-        btn_sizer.Add(btn_cerrar,   0, wx.RIGHT, 10)
-        btn_sizer.Add(btn_guardar,  0)
- 
-        # ── Ensamblaje ────────────────────────────────────────
-        sizer.Add(lbl,           0, wx.ALL, 15)
-        sizer.Add(instruccion,   0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 15)
-        sizer.Add(toolbar_panel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 15)
-        sizer.Add(self.rtc,      1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
-        sizer.Add(btn_sizer,     0, wx.EXPAND | wx.ALL, 15)
-        main_panel.SetSizer(sizer)
+        self.btn_cancel = wx.Button(self, wx.ID_CANCEL, label="❌ Cancelar")
+        self.btn_ok = wx.Button(self, wx.ID_OK, label="✔️ Insertar Imagen")
+        btn_sizer.Add(self.btn_cancel, 0, wx.RIGHT, 15)
+        btn_sizer.Add(self.btn_ok, 0)
+        sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.BOTTOM, 15)
+        
+        self.SetSizer(sizer)
+        self.Fit()
         self.Center()
- 
-    # ── Registro de handlers richtext ─────────────────────────
-    def _registrar_handlers(self):
-        if rt.RichTextBuffer.FindHandlerByType(rt.RICHTEXT_TYPE_HTML) is None:
-            rt.RichTextBuffer.AddHandler(rt.RichTextHTMLHandler())
-            rt.RichTextBuffer.AddHandler(rt.RichTextXMLHandler())
-            wx.FileSystem.AddHandler(wx.MemoryFSHandler())
- 
-    # ── Formato de texto ──────────────────────────────────────
-    def on_bold(self, event):
-        self.rtc.ApplyBoldToSelection()
-        self.rtc.SetFocus()
- 
-    def on_italic(self, event):
-        self.rtc.ApplyItalicToSelection()
-        self.rtc.SetFocus()
- 
-    def on_underline(self, event):
-        self.rtc.ApplyUnderlineToSelection()
-        self.rtc.SetFocus()
- 
-    def on_align_left(self, event):
+        
+    def on_slide(self, event):
+        self.escala = self.slider.GetValue()
+        nw = int(self.img.GetWidth() * (self.escala / 100.0))
+        nh = int(self.img.GetHeight() * (self.escala / 100.0))
+        self.lbl_preview.SetLabel(f"Tamaño final: {nw} x {nh} px")
+        self.Layout()
+
+
+# ==========================================
+# EL EDITOR ENRIQUECIDO COMPLETO
+# ==========================================
+class EditorEnriquecido(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        # --- FILA 1: Estilos de Texto, Alineación y Elementos ---
+        self.toolbar1 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.btn_bold = wx.Button(self, label="N", size=(35, 35))
+        self.btn_bold.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        self.btn_italic = wx.Button(self, label="C", size=(35, 35))
+        self.btn_italic.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_ITALIC, wx.FONTWEIGHT_NORMAL))
+        self.btn_under = wx.Button(self, label="S", size=(35, 35))
+        self.btn_under.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, True))
+        
+        self.btn_hl = wx.Button(self, label="🖍 Resaltar", size=(-1, 35))
+        self.btn_color = wx.Button(self, label="🎨 Letra", size=(-1, 35))
+        self.btn_font = wx.Button(self, label="abc Tipografía", size=(-1, 35))
+        
+        self.btn_align_l = wx.Button(self, label="⇤ Izq", size=(-1, 35))
+        self.btn_align_c = wx.Button(self, label="↔ Centro", size=(-1, 35))
+        self.btn_align_r = wx.Button(self, label="⇥ Der", size=(-1, 35))
+        
+        self.btn_img = wx.Button(self, label="📷 Imagen", size=(-1, 35))
+        self.btn_table = wx.Button(self, label="▦ Tabla", size=(-1, 35))
+
+        for b in [self.btn_bold, self.btn_italic, self.btn_under]:
+            self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.toolbar1.AddSpacer(10)
+        for b in [self.btn_hl, self.btn_color, self.btn_font]:
+            self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.toolbar1.AddSpacer(10)
+        for b in [self.btn_align_l, self.btn_align_c, self.btn_align_r]:
+            self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.toolbar1.AddStretchSpacer()
+        for b in [self.btn_img, self.btn_table]:
+            self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+
+        # --- FILA 2: Sangrías y Espaciados (De la demo) ---
+        self.toolbar2 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.btn_ind_less = wx.Button(self, label="⬅️ - Sangría", size=(-1, 35))
+        self.btn_ind_more = wx.Button(self, label="+ Sangría ➡️", size=(-1, 35))
+        
+        self.btn_ls_1 = wx.Button(self, label="↕️ Línea x1.0", size=(-1, 35))
+        self.btn_ls_15 = wx.Button(self, label="↕️ Línea x1.5", size=(-1, 35))
+        self.btn_ls_2 = wx.Button(self, label="↕️ Línea x2.0", size=(-1, 35))
+        
+        self.btn_ps_less = wx.Button(self, label="⬆️ - Párrafo", size=(-1, 35))
+        self.btn_ps_more = wx.Button(self, label="⬇️ + Párrafo", size=(-1, 35))
+
+        for b in [self.btn_ind_less, self.btn_ind_more]:
+            self.toolbar2.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        self.toolbar2.AddSpacer(15)
+        for b in [self.btn_ls_1, self.btn_ls_15, self.btn_ls_2]:
+            self.toolbar2.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        self.toolbar2.AddSpacer(15)
+        for b in [self.btn_ps_less, self.btn_ps_more]:
+            self.toolbar2.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+
+        # --- ÁREA DE TEXTO ---
+        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL | wx.HSCROLL | wx.BORDER_SUNKEN)
+        self.rtc.SetMargins(15, 15)
+        
+        # Ensamblar Sizers
+        self.sizer.Add(self.toolbar1, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        self.sizer.Add(self.toolbar2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        self.sizer.Add(self.rtc, 1, wx.EXPAND | wx.ALL, 5)
+        self.SetSizer(self.sizer)
+        
+        # --- BINDINGS DE EVENTOS ---
+        self.btn_bold.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyBoldToSelection())
+        self.btn_italic.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyItalicToSelection())
+        self.btn_under.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyUnderlineToSelection())
+        
+        self.btn_color.Bind(wx.EVT_BUTTON, self.OnColour)
+        self.btn_hl.Bind(wx.EVT_BUTTON, self.OnHighlight)
+        self.btn_font.Bind(wx.EVT_BUTTON, self.OnFont)
+        
+        self.btn_align_l.Bind(wx.EVT_BUTTON, self.OnAlignLeft)
+        self.btn_align_c.Bind(wx.EVT_BUTTON, self.OnAlignCenter)
+        self.btn_align_r.Bind(wx.EVT_BUTTON, self.OnAlignRight)
+        
+        self.btn_ind_more.Bind(wx.EVT_BUTTON, self.OnIndentMore)
+        self.btn_ind_less.Bind(wx.EVT_BUTTON, self.OnIndentLess)
+        
+        self.btn_ls_1.Bind(wx.EVT_BUTTON, self.OnLineSpacingSingle)
+        self.btn_ls_15.Bind(wx.EVT_BUTTON, self.OnLineSpacingHalf)
+        self.btn_ls_2.Bind(wx.EVT_BUTTON, self.OnLineSpacingDouble)
+        
+        self.btn_ps_more.Bind(wx.EVT_BUTTON, self.OnParagraphSpacingMore)
+        self.btn_ps_less.Bind(wx.EVT_BUTTON, self.OnParagraphSpacingLess)
+        
+        self.btn_img.Bind(wx.EVT_BUTTON, self.OnInsertImage)
+        self.btn_table.Bind(wx.EVT_BUTTON, self.OnInsertTable)
+
+    # ==========================================
+    # FUNCIONES DE FORMATO (DE LA DEMO)
+    # ==========================================
+    def OnAlignLeft(self, evt):
         self.rtc.ApplyAlignmentToSelection(wx.TEXT_ALIGNMENT_LEFT)
-        self._deselect_align_btns(except_btn=self.btn_left)
-        self.rtc.SetFocus()
- 
-    def on_align_center(self, event):
-        self.rtc.ApplyAlignmentToSelection(wx.TEXT_ALIGNMENT_CENTRE)
-        self._deselect_align_btns(except_btn=self.btn_center)
-        self.rtc.SetFocus()
- 
-    def on_align_right(self, event):
+
+    def OnAlignRight(self, evt):
         self.rtc.ApplyAlignmentToSelection(wx.TEXT_ALIGNMENT_RIGHT)
-        self._deselect_align_btns(except_btn=self.btn_right)
-        self.rtc.SetFocus()
- 
-    def _deselect_align_btns(self, except_btn):
-        for btn in (self.btn_left, self.btn_center, self.btn_right):
-            if btn is not except_btn:
-                btn.SetValue(False)
- 
-    def on_indent_more(self, event):
+
+    def OnAlignCenter(self, evt):
+        self.rtc.ApplyAlignmentToSelection(wx.TEXT_ALIGNMENT_CENTRE)
+
+    def OnIndentMore(self, evt):
         attr = wx.TextAttr()
         attr.SetFlags(wx.TEXT_ATTR_LEFT_INDENT)
         ip = self.rtc.GetInsertionPoint()
         if self.rtc.GetStyle(ip, attr):
-            r = (self.rtc.GetSelectionRange() if self.rtc.HasSelection()
-                 else rt.RichTextRange(ip, ip))
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
             attr.SetLeftIndent(attr.GetLeftIndent() + 100)
             attr.SetFlags(wx.TEXT_ATTR_LEFT_INDENT)
             self.rtc.SetStyle(r, attr)
-        self.rtc.SetFocus()
- 
-    def on_indent_less(self, event):
+
+    def OnIndentLess(self, evt):
         attr = wx.TextAttr()
         attr.SetFlags(wx.TEXT_ATTR_LEFT_INDENT)
         ip = self.rtc.GetInsertionPoint()
-        if self.rtc.GetStyle(ip, attr) and attr.GetLeftIndent() >= 100:
-            r = (self.rtc.GetSelectionRange() if self.rtc.HasSelection()
-                 else rt.RichTextRange(ip, ip))
-            attr.SetLeftIndent(attr.GetLeftIndent() - 100)
-            attr.SetFlags(wx.TEXT_ATTR_LEFT_INDENT)
+        if self.rtc.GetStyle(ip, attr):
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
+            if attr.GetLeftIndent() >= 100:
+                attr.SetLeftIndent(attr.GetLeftIndent() - 100)
+                attr.SetFlags(wx.TEXT_ATTR_LEFT_INDENT)
+                self.rtc.SetStyle(r, attr)
+
+    def OnParagraphSpacingMore(self, evt):
+        attr = wx.TextAttr()
+        attr.SetFlags(wx.TEXT_ATTR_PARA_SPACING_AFTER)
+        ip = self.rtc.GetInsertionPoint()
+        if self.rtc.GetStyle(ip, attr):
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
+            attr.SetParagraphSpacingAfter(attr.GetParagraphSpacingAfter() + 20)
+            attr.SetFlags(wx.TEXT_ATTR_PARA_SPACING_AFTER)
             self.rtc.SetStyle(r, attr)
-        self.rtc.SetFocus()
- 
-    def on_font(self, event):
-        r = self.rtc.GetSelectionRange() if self.rtc.HasSelection() else None
+
+    def OnParagraphSpacingLess(self, evt):
+        attr = wx.TextAttr()
+        attr.SetFlags(wx.TEXT_ATTR_PARA_SPACING_AFTER)
+        ip = self.rtc.GetInsertionPoint()
+        if self.rtc.GetStyle(ip, attr):
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
+            if attr.GetParagraphSpacingAfter() >= 20:
+                attr.SetParagraphSpacingAfter(attr.GetParagraphSpacingAfter() - 20)
+                attr.SetFlags(wx.TEXT_ATTR_PARA_SPACING_AFTER)
+                self.rtc.SetStyle(r, attr)
+
+    def OnLineSpacingSingle(self, evt):
+        attr = wx.TextAttr()
+        attr.SetFlags(wx.TEXT_ATTR_LINE_SPACING)
+        ip = self.rtc.GetInsertionPoint()
+        if self.rtc.GetStyle(ip, attr):
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
+            attr.SetFlags(wx.TEXT_ATTR_LINE_SPACING)
+            attr.SetLineSpacing(10)
+            self.rtc.SetStyle(r, attr)
+
+    def OnLineSpacingHalf(self, evt):
+        attr = wx.TextAttr()
+        attr.SetFlags(wx.TEXT_ATTR_LINE_SPACING)
+        ip = self.rtc.GetInsertionPoint()
+        if self.rtc.GetStyle(ip, attr):
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
+            attr.SetFlags(wx.TEXT_ATTR_LINE_SPACING)
+            attr.SetLineSpacing(15)
+            self.rtc.SetStyle(r, attr)
+
+    def OnLineSpacingDouble(self, evt):
+        attr = wx.TextAttr()
+        attr.SetFlags(wx.TEXT_ATTR_LINE_SPACING)
+        ip = self.rtc.GetInsertionPoint()
+        if self.rtc.GetStyle(ip, attr):
+            r = rt.RichTextRange(ip, ip)
+            if self.rtc.HasSelection(): r = self.rtc.GetSelectionRange()
+            attr.SetFlags(wx.TEXT_ATTR_LINE_SPACING)
+            attr.SetLineSpacing(20)
+            self.rtc.SetStyle(r, attr)
+
+    # ==========================================
+    # FUNCIONES BASE DE TEXTO Y MEDIOS
+    # ==========================================
+    def OnHighlight(self, event):
+        colorData = wx.ColourData()
+        dlg = wx.ColourDialog(self, colorData)
+        if dlg.ShowModal() == wx.ID_OK:
+            color = dlg.GetColourData().GetColour()
+            attr = rt.RichTextAttr()
+            attr.SetFlags(wx.TEXT_ATTR_BACKGROUND_COLOUR)
+            attr.SetBackgroundColour(color)
+            if self.rtc.HasSelection(): self.rtc.SetStyle(self.rtc.GetSelectionRange(), attr)
+            else: self.rtc.SetDefaultStyle(attr)
+        dlg.Destroy()
+
+    def OnColour(self, event):
+        dlg = wx.ColourDialog(self)
+        if dlg.ShowModal() == wx.ID_OK:
+            colour = dlg.GetColourData().GetColour()
+            if not self.rtc.HasSelection(): self.rtc.BeginTextColour(colour)
+            else:
+                r = self.rtc.GetSelectionRange()
+                attr = wx.TextAttr()
+                attr.SetFlags(wx.TEXT_ATTR_TEXT_COLOUR)
+                attr.SetTextColour(colour)
+                self.rtc.SetStyle(r, attr)
+        dlg.Destroy()
+
+    def OnFont(self, event):
+        if not self.rtc.HasSelection(): return
+        r = self.rtc.GetSelectionRange()
         fontData = wx.FontData()
-        fontData.EnableEffects(False)
         attr = wx.TextAttr()
         attr.SetFlags(wx.TEXT_ATTR_FONT)
         if self.rtc.GetStyle(self.rtc.GetInsertionPoint(), attr):
             fontData.SetInitialFont(attr.GetFont())
+
         dlg = wx.FontDialog(self, fontData)
         if dlg.ShowModal() == wx.ID_OK:
             font = dlg.GetFontData().GetChosenFont()
-            if font and r:
+            if font:
                 attr.SetFlags(wx.TEXT_ATTR_FONT)
                 attr.SetFont(font)
                 self.rtc.SetStyle(r, attr)
         dlg.Destroy()
-        self.rtc.SetFocus()
- 
-    def on_color(self, event):
-        colourData = wx.ColourData()
+
+    def OnInsertImage(self, event):
+        with wx.FileDialog(self, "Seleccionar Imagen", wildcard="Imágenes (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg", style=wx.FD_OPEN) as dlg_file:
+            if dlg_file.ShowModal() == wx.ID_OK:
+                img = wx.Image(dlg_file.GetPath())
+                dlg_ajuste = DialogoAjusteImagen(self, img)
+                if dlg_ajuste.ShowModal() == wx.ID_OK:
+                    escala = dlg_ajuste.escala
+                    if escala != 100:
+                        nw = int(img.GetWidth() * (escala / 100.0))
+                        nh = int(img.GetHeight() * (escala / 100.0))
+                        img = img.Scale(nw, nh, wx.IMAGE_QUALITY_HIGH)
+                    self.rtc.WriteImage(img)
+                dlg_ajuste.Destroy()
+
+    def OnInsertTable(self, event):
+        filas = wx.GetNumberFromUser("Número de Filas", "Filas:", "Crear Tabla", 3, 1, 20, self)
+        if filas <= 0: return
+        cols = wx.GetNumberFromUser("Número de Columnas", "Columnas:", "Crear Tabla", 3, 1, 10, self)
+        if cols <= 0: return
+        self.rtc.WriteTable(filas, cols)
+
+    # ==========================================
+    # UTILIDADES DE SISTEMA
+    # ==========================================
+    def bloquear_edicion(self, bloquear):
+        self.rtc.SetEditable(not bloquear)
+        for toolbar in [self.toolbar1, self.toolbar2]:
+            for child in toolbar.GetChildren():
+                widget = child.GetWindow()
+                if widget and isinstance(widget, wx.Button):
+                    widget.Enable(not bloquear)
+
+    def activar_modo_correccion(self):
+        self.bloquear_edicion(False)
         attr = wx.TextAttr()
         attr.SetFlags(wx.TEXT_ATTR_TEXT_COLOUR)
-        if self.rtc.GetStyle(self.rtc.GetInsertionPoint(), attr):
-            colourData.SetColour(attr.GetTextColour())
-        dlg = wx.ColourDialog(self, colourData)
-        if dlg.ShowModal() == wx.ID_OK:
-            colour = dlg.GetColourData().GetColour()
-            if colour:
-                if self.rtc.HasSelection():
-                    r = self.rtc.GetSelectionRange()
-                    attr.SetFlags(wx.TEXT_ATTR_TEXT_COLOUR)
-                    attr.SetTextColour(colour)
-                    self.rtc.SetStyle(r, attr)
-                else:
-                    self.rtc.BeginTextColour(colour)
-        dlg.Destroy()
+        attr.SetTextColour(wx.Colour(180, 0, 0))
+        self.rtc.SetDefaultStyle(attr)
         self.rtc.SetFocus()
- 
-    def on_undo(self, event):
-        if self.rtc.CanUndo():
-            self.rtc.Undo()
-        self.rtc.SetFocus()
- 
-    def on_redo(self, event):
-        if self.rtc.CanRedo():
-            self.rtc.Redo()
-        self.rtc.SetFocus()
- 
-    # ── Sincronizar estado visual de botones ──────────────────
-    def _actualizar_toolbar(self, event):
-        self.btn_bold.SetValue(self.rtc.IsSelectionBold())
-        self.btn_italic.SetValue(self.rtc.IsSelectionItalics())
-        self.btn_underline.SetValue(self.rtc.IsSelectionUnderlined())
-        self.btn_left.SetValue(self.rtc.IsSelectionAligned(wx.TEXT_ALIGNMENT_LEFT))
-        self.btn_center.SetValue(self.rtc.IsSelectionAligned(wx.TEXT_ALIGNMENT_CENTRE))
-        self.btn_right.SetValue(self.rtc.IsSelectionAligned(wx.TEXT_ALIGNMENT_RIGHT))
-        event.Skip()
- 
-    # ── Guardar y limpiar ─────────────────────────────────────
-    def guardar(self, event):
-        contenido = self.rtc.GetValue()
-        if not contenido.strip():
-            wx.MessageBox("Escribí algo antes de guardar.", "Atención",
-                          wx.OK | wx.ICON_WARNING)
-            return
-        materias = {m["nombre"]: m["id"] for m in self.db.obtener_materias()}
-        if self.tema not in materias:
-            mat_id = self.db.agregar_materia(self.tema)
-        else:
-            mat_id = materias[self.tema]
-        self.db.agregar_apunte(mat_id, self.tema, contenido)
-        wx.MessageBox("¡Apunte guardado correctamente!", "Listo",
-                      wx.OK | wx.ICON_INFORMATION)
-        self.Close()
- 
-    def limpiar(self, event):
-        if wx.MessageBox("¿Seguro que querés borrar todo el texto?", "Confirmar",
-                         wx.YES_NO | wx.ICON_QUESTION) == wx.YES:
-            self.rtc.Clear()
+
+    def get_xml(self):
+        buffer = io.BytesIO()
+        handler = rt.RichTextXMLHandler()
+        handler.SaveFile(self.rtc.GetBuffer(), buffer)
+        return buffer.getvalue().decode('utf-8')
+
+    def load_xml(self, xml_string):
+        self.rtc.Clear()
+        if xml_string:
+            buffer = io.BytesIO(xml_string.encode('utf-8'))
+            handler = rt.RichTextXMLHandler()
+            try: handler.LoadFile(self.rtc.GetBuffer(), buffer)
+            except: pass
+        self.rtc.Refresh()
