@@ -17,15 +17,17 @@ HORARIOS = [f"{h:02d}:00" for h in range(8, 21)] # 08:00 a 20:00
 # NUEVO SISTEMA DE ESTILOS (PALETA CSS)
 # ==========================================
 class Paleta:
-    # --- MODO CLARO ---
-    FONDO_CLARO = wx.Colour(245, 245, 245)
-    TEXTO_CLARO = wx.Colour(30, 30, 30)
-    PANEL_SECUNDARIO_CLARO = wx.Colour(255, 255, 255)
+    # --- MODO CLARO INSTITUCIONAL ---
+    # Fondo más blanco, paneles con un levísimo tono azulado y texto color Navy (Azul UNPi)
+    FONDO_CLARO = wx.Colour(255, 255, 255)
+    TEXTO_CLARO = wx.Colour(17, 46, 107)         # Reemplaza el gris oscuro por el Azul UNPi
+    PANEL_SECUNDARIO_CLARO = wx.Colour(242, 245, 250) 
     
-    # --- MODO OSCURO (Estilo Moderno) ---
-    FONDO_OSCURO = wx.Colour(35, 35, 35)       
-    TEXTO_OSCURO = wx.Colour(230, 230, 230)    
-    PANEL_SECUNDARIO_OSCURO = wx.Colour(50, 50, 50) 
+    # --- MODO OSCURO "UNPi DEEP NAVY" ---
+    # Reemplazamos los grises genéricos por un azul marino extremadamente profundo y elegante
+    FONDO_OSCURO = wx.Colour(15, 22, 40)       
+    TEXTO_OSCURO = wx.Colour(230, 235, 250)      # Blanco con un sutil tinte azul para descansar la vista
+    PANEL_SECUNDARIO_OSCURO = wx.Colour(28, 39, 70) 
 
 def aplicar_tema(window, es_oscuro):
     """Inyecta los estilos CSS-like a todos los componentes de la app."""

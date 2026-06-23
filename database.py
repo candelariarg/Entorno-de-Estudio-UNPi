@@ -47,9 +47,19 @@ class DatabaseManager:
         """)
         self.conn.commit()
 
+        try:
+            self.cursor.execute("ALTER TABLE apuntes ADD COLUMN materia_id INTEGER REFERENCES materias(id)")
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            # Si la columna ya existe, ignoramos el error
+            pass
+
     # --- CRUD Apuntes ---
-    def guardar_apunte(self, nombre, metodo, xml):
-        self.cursor.execute("INSERT INTO apuntes (nombre, metodo, contenido_xml) VALUES (?, ?, ?)", (nombre, metodo, xml))
+    def guardar_apunte(self, nombre, metodo, xml, materia_id=None):
+        self.cursor.execute(
+            "INSERT INTO apuntes (nombre, metodo, contenido_xml, materia_id) VALUES (?, ?, ?, ?)", 
+            (nombre, metodo, xml, materia_id)
+        )
         self.conn.commit()
         return self.cursor.lastrowid
 

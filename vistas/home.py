@@ -8,13 +8,20 @@ class PanelHome(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        lbl_saludo = wx.StaticText(self, label="¡Hola! ¿Qué vamos a estudiar hoy en la Uni?")
-        lbl_saludo.SetFont(wx.Font(20, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        lbl_saludo = wx.StaticText(self, label="Ingresa el tema de estudio:")
+        lbl_saludo.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         
         self.txt_tema = wx.TextCtrl(self, size=(500, 35))
         self.txt_tema.SetHint("Título del apunte (ej. Repaso Lógica, Proyecto Java)...")
         self.txt_tema.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         
+        # Obtener la lista de materias desde la base de datos y crear el ComboBox
+        self.lista_materias = self.db.obtener_materias()
+        opciones = ["Ninguna (Apunte suelto)"] + [m['nombre'] for m in self.lista_materias]
+        
+        self.combo_materia = wx.ComboBox(self, choices=opciones, style=wx.CB_READONLY, size=(500, 35))
+        self.combo_materia.SetSelection(0) # Por defecto "Ninguna"
+
         lbl_tecnicas = wx.StaticText(self, label="Elige una técnica de estudio para arrancar:")
         lbl_tecnicas.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         
@@ -32,11 +39,18 @@ class PanelHome(wx.Panel):
         btn_matriz.Bind(wx.EVT_BUTTON, lambda e: self.crear_apunte("Matriz de Análisis"))
         btn_flash.Bind(wx.EVT_BUTTON, lambda e: self.crear_apunte("Flashcards"))
         
-        # Ensamblaje
+        # --- NUEVO ENSAMBLAJE (ALINEADO) ---
+        # Agrupamos los inputs para que compartan el mismo margen
+        input_sizer = wx.BoxSizer(wx.VERTICAL)
+        input_sizer.Add(self.txt_tema, 0, wx.BOTTOM, 10)
+        input_sizer.Add(self.combo_materia, 0, wx.BOTTOM, 0)
+        
+        # Agregamos todo al sizer principal
         sizer.Add(lbl_saludo, 0, wx.TOP | wx.LEFT, 40)
-        sizer.Add(self.txt_tema, 0, wx.LEFT | wx.TOP, 20)
+        sizer.Add(input_sizer, 0, wx.LEFT | wx.TOP, 20) # <-- Ahora ambos tienen margen 20
         sizer.Add(lbl_tecnicas, 0, wx.LEFT | wx.TOP, 40)
         sizer.Add(grid_botones, 0, wx.LEFT | wx.TOP, 20)
+        
         self.SetSizer(sizer)
 
     def crear_boton(self, sizer, label, art_id):
@@ -58,9 +72,18 @@ class PanelHome(wx.Panel):
             wx.MessageBox("Escribí un título o tema primero, por favor.", "Falta título")
             return
             
-        # Pasa un string vacío al XML inicial
-        apunte_id = self.db.guardar_apunte(titulo, metodo, "")
+        # Determinar el ID de la materia seleccionada (si es que se seleccionó alguna)
+        idx_seleccionado = self.combo_materia.GetSelection()
+        materia_id_seleccionada = None
+        if idx_seleccionado > 0:
+            # Restamos 1 porque el índice 0 es "Ninguna"
+            materia_id_seleccionada = self.lista_materias[idx_seleccionado - 1]['id']
+            
+        # Pasa un string vacío al XML inicial, y el ID de la materia
+        apunte_id = self.db.guardar_apunte(titulo, metodo, "", materia_id=materia_id_seleccionada)
+        
         self.txt_tema.Clear()
+        self.combo_materia.SetSelection(0) # Reiniciar selector
         
         self.main_frame.actualizar_lista_apuntes()
         self.main_frame.ir_a_apunte(apunte_id, titulo, metodo)

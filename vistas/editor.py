@@ -74,11 +74,18 @@ class EditorEnriquecido(wx.Panel):
         self.btn_align_l = wx.Button(self, label="⇤ Izq", size=(-1, 35))
         self.btn_align_c = wx.Button(self, label="↔ Centro", size=(-1, 35))
         self.btn_align_r = wx.Button(self, label="⇥ Der", size=(-1, 35))
+
+        self.btn_undo = wx.Button(self, label="↩ Deshacer", size=(-1, 35))
+        self.btn_redo = wx.Button(self, label="↪ Rehacer", size=(-1, 35))
         
         self.btn_img = wx.Button(self, label="📷 Imagen", size=(-1, 35))
         self.btn_table = wx.Button(self, label="▦ Tabla", size=(-1, 35))
 
+
         for b in [self.btn_bold, self.btn_italic, self.btn_under]:
+            self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 2)
+        self.toolbar1.AddSpacer(10)
+        for b in [self.btn_undo, self.btn_redo]:
             self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 2)
         self.toolbar1.AddSpacer(10)
         for b in [self.btn_hl, self.btn_color, self.btn_font]:
@@ -126,6 +133,9 @@ class EditorEnriquecido(wx.Panel):
         self.btn_bold.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyBoldToSelection())
         self.btn_italic.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyItalicToSelection())
         self.btn_under.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyUnderlineToSelection())
+
+        self.btn_undo.Bind(wx.EVT_BUTTON, self.OnUndo)
+        self.btn_redo.Bind(wx.EVT_BUTTON, self.OnRedo)
         
         self.btn_color.Bind(wx.EVT_BUTTON, self.OnColour)
         self.btn_hl.Bind(wx.EVT_BUTTON, self.OnHighlight)
@@ -148,9 +158,20 @@ class EditorEnriquecido(wx.Panel):
         self.btn_img.Bind(wx.EVT_BUTTON, self.OnInsertImage)
         self.btn_table.Bind(wx.EVT_BUTTON, self.OnInsertTable)
 
+
+
     # ==========================================
     # FUNCIONES DE FORMATO (DE LA DEMO)
     # ==========================================
+
+    def OnUndo(self, evt):
+        if self.rtc.CanUndo():
+            self.rtc.Undo()
+
+    def OnRedo(self, evt):
+        if self.rtc.CanRedo():
+            self.rtc.Redo()
+            
     def OnAlignLeft(self, evt):
         self.rtc.ApplyAlignmentToSelection(wx.TEXT_ALIGNMENT_LEFT)
 
@@ -285,8 +306,28 @@ class EditorEnriquecido(wx.Panel):
                 self.rtc.SetStyle(r, attr)
         dlg.Destroy()
 
+    # Cambiar la ruta para que detecte automáticamente variantes de "Imágenes"
     def OnInsertImage(self, event):
-        with wx.FileDialog(self, "Seleccionar Imagen", wildcard="Imágenes (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg", style=wx.FD_OPEN) as dlg_file:
+        import os
+        
+        # 1. Obtener la carpeta principal del usuario (ej: C:\Users\TuNombre o /home/usuario)
+        home_dir = os.path.expanduser("~")
+        
+        # 2. Lista de posibles nombres que el sistema operativo le da a la carpeta
+        posibles_nombres = ["Imágenes", "Imagenes", "Pictures", "Mis imágenes", "My Pictures"]
+        
+        # Por defecto, si no encuentra la carpeta, abrirá en la carpeta principal del usuario
+        carpeta_img = home_dir 
+        
+        # 3. Buscar cuál de esas carpetas existe realmente en la PC
+        for nombre in posibles_nombres:
+            ruta_prueba = os.path.join(home_dir, nombre)
+            if os.path.exists(ruta_prueba) and os.path.isdir(ruta_prueba):
+                carpeta_img = ruta_prueba
+                break # Encontramos la correcta, dejamos de buscar
+
+        # 4. Abrir el cuadro de diálogo en la carpeta detectada
+        with wx.FileDialog(self, "Seleccionar Imagen", defaultDir=carpeta_img, wildcard="Imágenes (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg", style=wx.FD_OPEN) as dlg_file:
             if dlg_file.ShowModal() == wx.ID_OK:
                 img = wx.Image(dlg_file.GetPath())
                 dlg_ajuste = DialogoAjusteImagen(self, img)

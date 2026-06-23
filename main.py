@@ -16,45 +16,61 @@ class MainFrame(wx.Frame):
         main_panel = wx.Panel(self)
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        # --- Barra Superior ---
-        top_bar = wx.Panel(main_panel)
-        top_bar.SetBackgroundColour(COLOR_NAVY)
+        # --- Barra Superior (UNPi Manager) ---
+        self.top_bar = wx.Panel(main_panel, style=wx.BORDER_NONE)
+        self.top_bar.SetBackgroundColour(COLOR_NAVY)
         top_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
-        titulo = wx.StaticText(top_bar, label="UNPi Study Manager")
-        titulo.SetForegroundColour(wx.WHITE)
-        titulo.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        self.titulo_app = wx.StaticText(self.top_bar, label="UNPi Study Manager")
+        self.titulo_app.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         
-        self.btn_tema = wx.Button(top_bar, label="🌙 Modo Oscuro")
+        # Botón de tema con Ícono Nativo
+        self.btn_tema = wx.Button(self.top_bar, label=" Tema Oscuro")
+        try:
+            self.btn_tema.SetBitmap(wx.ArtProvider.GetBitmap(wx.ART_TIP, wx.ART_BUTTON, (16, 16)))
+        except: pass
         self.btn_tema.Bind(wx.EVT_BUTTON, self.alternar_tema)
         
-        top_sizer.Add(titulo, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
-        top_sizer.Add(self.btn_tema, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
-        top_bar.SetSizer(top_sizer)
+        # FIX PARA DAR MÁS ESPACIO ARRIBA/ABAJO A UNPi MANAGER:
+        # Agregamos los márgenes verticales (wx.TOP | wx.BOTTOM) dentro de la barra azul.
+        # Usamos un padding de 15 píxeles para que la barra azul sea más alta y respire.
+        top_sizer.Add(self.titulo_app, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 15)
+        top_sizer.Add(self.btn_tema, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT | wx.TOP | wx.BOTTOM, 15)
+        
+        self.top_bar.SetSizer(top_sizer)
         
         # --- Pestañas Superiores ---
         self.notebook = wx.Notebook(main_panel)
         
         self.tab_home = PanelHome(self.notebook, self.db, self)
-        self.tab_materias = PanelMaterias(self.notebook, self.db)
+        self.tab_materias = PanelMaterias(self.notebook, self.db, self)
         self.tab_planner = PanelPlanner(self.notebook, self.db)
-        self.tab_apuntes = PanelApuntes(self.notebook, self.db)
+        self.tab_apuntes = PanelApuntes(self.notebook, self.db) # Asegúrate de pasar db si lo requiere
         self.tab_mis_apuntes = PanelMisApuntes(self.notebook, self.db, self)
         
-        self.notebook.AddPage(self.tab_home, "🏠 Inicio")
-        self.notebook.AddPage(self.tab_materias, "📚 Materias")
-        self.notebook.AddPage(self.tab_planner, "📅 Planner")
-        self.notebook.AddPage(self.tab_apuntes, "📝 Editor / Estudio")
-        self.notebook.AddPage(self.tab_mis_apuntes, "🗂 Mis Apuntes")
+        self.notebook.AddPage(self.tab_home, "Inicio")
+        self.notebook.AddPage(self.tab_materias, "Materias")
+        self.notebook.AddPage(self.tab_planner, "Planner")
+        self.notebook.AddPage(self.tab_apuntes, "Editor / Estudio")
+        self.notebook.AddPage(self.tab_mis_apuntes, "Mis Apuntes")
         
-        main_sizer.Add(top_bar, 0, wx.EXPAND)
+        # Ensamblaje Principal
+        main_sizer.Add(self.top_bar, 0, wx.EXPAND)
         main_sizer.Add(self.notebook, 1, wx.EXPAND)
         main_panel.SetSizer(main_sizer)
         
+        # Aplicamos tema y maximizamos
         aplicar_tema(self, self.es_oscuro)
-        top_bar.SetBackgroundColour(COLOR_NAVY)
-        self.Center()
+        self._forzar_colores_topbar()
+        self.Maximize(True)
         self.Show()
+
+    def _forzar_colores_topbar(self):
+        """Mantiene los colores forzados para evitar que el 'modo claro' pinte de blanco la barra azul"""
+        self.top_bar.SetBackgroundColour(COLOR_NAVY)
+        self.titulo_app.SetBackgroundColour(COLOR_NAVY)
+        self.titulo_app.SetForegroundColour(wx.WHITE)
+        self.top_bar.Refresh()
 
     def ir_a_apunte(self, apunte_id, titulo, metodo):
         self.notebook.SetSelection(3)
@@ -65,9 +81,9 @@ class MainFrame(wx.Frame):
 
     def alternar_tema(self, event):
         self.es_oscuro = not self.es_oscuro
-        self.btn_tema.SetLabel("☀️ Modo Claro" if self.es_oscuro else "🌙 Modo Oscuro")
+        self.btn_tema.SetLabel(" Tema Claro" if self.es_oscuro else " Tema Oscuro")
         aplicar_tema(self, self.es_oscuro)
-        self.GetChildren()[0].GetChildren()[0].SetBackgroundColour(COLOR_NAVY)
+        self._forzar_colores_topbar()
         self.Refresh()
 
 if __name__ == "__main__":
