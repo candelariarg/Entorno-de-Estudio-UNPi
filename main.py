@@ -6,6 +6,7 @@ from vistas.apuntes import PanelApuntes
 from vistas.materias import PanelMaterias
 from vistas.planner import PanelPlanner
 from vistas.mis_apuntes import PanelMisApuntes
+from vistas.acerca_de import PanelAcercaDe
 
 class MainFrame(wx.Frame):
     def __init__(self):
@@ -16,7 +17,7 @@ class MainFrame(wx.Frame):
         main_panel = wx.Panel(self)
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        # --- Barra Superior (UNPi Manager) ---
+        # --- Barra Superior (Entorno de Estudio UNPi) ---
         self.top_bar = wx.Panel(main_panel, style=wx.BORDER_NONE)
         self.top_bar.SetBackgroundColour(COLOR_NAVY)
         top_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -46,7 +47,8 @@ class MainFrame(wx.Frame):
         idx_planner = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_LIST_VIEW, wx.ART_OTHER, (16, 16)))
         idx_editor = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, (16, 16)))
         idx_mis_apuntes = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_REPORT_VIEW, wx.ART_OTHER, (16, 16)))
-        
+        idx_acerca_de = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_INFORMATION, wx.ART_OTHER, (16, 16)))
+
         # 2. Asignamos la lista de imágenes al notebook
         self.notebook.AssignImageList(image_list)
         
@@ -55,14 +57,16 @@ class MainFrame(wx.Frame):
         self.tab_planner = PanelPlanner(self.notebook, self.db)
         self.tab_apuntes = PanelApuntes(self.notebook, self.db) 
         self.tab_mis_apuntes = PanelMisApuntes(self.notebook, self.db, self)
-        
+        self.tab_acerca_de = PanelAcercaDe(self.notebook)
+
         # 3. Agregamos las páginas vinculando el ID de cada imagen
         self.notebook.AddPage(self.tab_home, "Inicio", imageId=idx_inicio)
         self.notebook.AddPage(self.tab_materias, "Materias", imageId=idx_materias)
         self.notebook.AddPage(self.tab_planner, "Planner", imageId=idx_planner)
         self.notebook.AddPage(self.tab_apuntes, "Editor / Estudio", imageId=idx_editor)
         self.notebook.AddPage(self.tab_mis_apuntes, "Mis Apuntes", imageId=idx_mis_apuntes)
-        
+        self.notebook.AddPage(self.tab_acerca_de, "Acerca de", imageId=idx_acerca_de)
+
         # Ensamblaje Principal
         main_sizer.Add(self.top_bar, 0, wx.EXPAND)
         main_sizer.Add(self.notebook, 1, wx.EXPAND)
