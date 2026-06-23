@@ -31,42 +31,49 @@ class MainFrame(wx.Frame):
         except: pass
         self.btn_tema.Bind(wx.EVT_BUTTON, self.alternar_tema)
         
-        # FIX PARA DAR MÁS ESPACIO ARRIBA/ABAJO A UNPi MANAGER:
-        # Agregamos los márgenes verticales (wx.TOP | wx.BOTTOM) dentro de la barra azul.
-        # Usamos un padding de 15 píxeles para que la barra azul sea más alta y respire.
+        # Ensamblaje de la barra superior con el espacio extra que habíamos logrado
         top_sizer.Add(self.titulo_app, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 15)
         top_sizer.Add(self.btn_tema, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT | wx.TOP | wx.BOTTOM, 15)
-        
         self.top_bar.SetSizer(top_sizer)
         
-        # --- Pestañas Superiores ---
+        # --- Pestañas Superiores (Con Íconos Nativos) ---
         self.notebook = wx.Notebook(main_panel)
+        
+        # 1. Creamos la lista de imágenes nativas del sistema operativo
+        image_list = wx.ImageList(16, 16)
+        idx_inicio = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_GO_HOME, wx.ART_OTHER, (16, 16)))
+        idx_materias = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, (16, 16)))
+        idx_planner = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_LIST_VIEW, wx.ART_OTHER, (16, 16)))
+        idx_editor = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, (16, 16)))
+        idx_mis_apuntes = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_REPORT_VIEW, wx.ART_OTHER, (16, 16)))
+        
+        # 2. Asignamos la lista de imágenes al notebook
+        self.notebook.AssignImageList(image_list)
         
         self.tab_home = PanelHome(self.notebook, self.db, self)
         self.tab_materias = PanelMaterias(self.notebook, self.db, self)
         self.tab_planner = PanelPlanner(self.notebook, self.db)
-        self.tab_apuntes = PanelApuntes(self.notebook, self.db) # Asegúrate de pasar db si lo requiere
+        self.tab_apuntes = PanelApuntes(self.notebook, self.db) 
         self.tab_mis_apuntes = PanelMisApuntes(self.notebook, self.db, self)
         
-        self.notebook.AddPage(self.tab_home, "Inicio")
-        self.notebook.AddPage(self.tab_materias, "Materias")
-        self.notebook.AddPage(self.tab_planner, "Planner")
-        self.notebook.AddPage(self.tab_apuntes, "Editor / Estudio")
-        self.notebook.AddPage(self.tab_mis_apuntes, "Mis Apuntes")
+        # 3. Agregamos las páginas vinculando el ID de cada imagen
+        self.notebook.AddPage(self.tab_home, "Inicio", imageId=idx_inicio)
+        self.notebook.AddPage(self.tab_materias, "Materias", imageId=idx_materias)
+        self.notebook.AddPage(self.tab_planner, "Planner", imageId=idx_planner)
+        self.notebook.AddPage(self.tab_apuntes, "Editor / Estudio", imageId=idx_editor)
+        self.notebook.AddPage(self.tab_mis_apuntes, "Mis Apuntes", imageId=idx_mis_apuntes)
         
         # Ensamblaje Principal
         main_sizer.Add(self.top_bar, 0, wx.EXPAND)
         main_sizer.Add(self.notebook, 1, wx.EXPAND)
         main_panel.SetSizer(main_sizer)
         
-        # Aplicamos tema y maximizamos
         aplicar_tema(self, self.es_oscuro)
         self._forzar_colores_topbar()
         self.Maximize(True)
         self.Show()
 
     def _forzar_colores_topbar(self):
-        """Mantiene los colores forzados para evitar que el 'modo claro' pinte de blanco la barra azul"""
         self.top_bar.SetBackgroundColour(COLOR_NAVY)
         self.titulo_app.SetBackgroundColour(COLOR_NAVY)
         self.titulo_app.SetForegroundColour(wx.WHITE)
