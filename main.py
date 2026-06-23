@@ -21,7 +21,7 @@ class MainFrame(wx.Frame):
         self.top_bar.SetBackgroundColour(COLOR_NAVY)
         top_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
-        self.titulo_app = wx.StaticText(self.top_bar, label="UNPi Study Manager")
+        self.titulo_app = wx.StaticText(self.top_bar, label="Entorno de Estudio UNPi")
         self.titulo_app.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         
         # Botón de tema con Ícono Nativo
