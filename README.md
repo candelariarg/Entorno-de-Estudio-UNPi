@@ -1,14 +1,12 @@
-# Entorno de Estudio - UNPilar
+# Entorno de Estudio UNPi:
+Aplicación de escritorio diseñada para organizar materias (datos, materiales, apuntes), tomar apuntes y planificar la semana de estudio. También el usuario podrá estduair con 4 métodos de estudio (apunte libre, Sprint Memoria, Matriz de Analisis y Flashcards).
 
-Aplicación de escritorio diseñada para organizar materias, tomar apuntes con el método Pomodoro y planificar la semana de estudio. 
-
-## Requisitos
+#Requisitos:
 * Python 3.x
 * wxPython
 * ReportLab
 
-## Instalación y Ejecución en Linux
-
+#Instalación y Ejecución en Linux:
 1. Clona este repositorio o descarga el código.
 2. Abre una terminal en la carpeta del proyecto.
 3. Crea un entorno virtual: `python3 -m venv .venv --system-site-packages`
