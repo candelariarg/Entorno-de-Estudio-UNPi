@@ -1,4 +1,4 @@
-# Entorno de Estudio UNPi:
+# Entorno de Estudio UNPi
 Aplicación de escritorio diseñada para organizar materias (datos, materiales, apuntes), tomar apuntes y planificar la semana de estudio. También el usuario podrá estduair con 4 métodos de estudio (apunte libre, Sprint Memoria, Matriz de Analisis y Flashcards).
 
 #Requisitos:
