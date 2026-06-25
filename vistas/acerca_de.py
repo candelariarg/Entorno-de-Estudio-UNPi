@@ -1,10 +1,72 @@
 import wx
-from wx.lib.wordwrap import wordwrap
 import wx.adv
 
 manualTexto = (
-    'Bienvenido al manual de usuario de "Entorno de Estudio UNPi".\n\n'
-    
+    'Manual de Usuario - Entorno de Estudio UNPi\n'
+
+    'Pestañas Principales:\n\n'
+
+    '1. Inicio:\n'
+    'Acá arrancás cada sesión. Escribí el título o tema del apunte, '
+    'elegí de qué materia es (opcional) y seleccioná uno de los cuatro '
+    'métodos de estudio. Al hacer clic en un método, el apunte se crea y se '
+    'abre automáticamente en la pestaña Editor/Estudio.\n\n'
+
+    '2. Materias:\n'
+    'Registrá tus materias con nombre, docente, días y horarios, link de clase '
+    '(Zoom, Meet, Drive) y estado (Cursando/Finalizada). Desde el botón '
+    '"Ir al Link" abrís la URL directamente en tu navegador. '
+    'También podés adjuntar archivos a cada materia (PDFs, presentaciones, '
+    'imágenes) y ver los apuntes que vinculaste. Doble clic sobre un ítem de la '
+    'lista lo abre con el programa correspondiente de tu pc.\n\n'
+
+    '3. Planner:\n'
+    'Grilla visual de lunes a domingo con franjas horarias. Creá bloques de '
+    'actividad con nombre y color, y arrastralos hasta el día y horario que '
+    'corresponda. Clic derecho sobre un bloque para eliminarlo. '
+    'Podés exportar tu semana a PDF con el botón "Exportar a PDF".\n\n'
+
+    '4. Editor/Estudio:\n'
+    'El área de trabajo central de la aplicación. Se activa al seleccionar un apunte. '
+    'Podés editar el título directamente y  guardar con el botón Guardar. '
+    'La aplicación NO guarda automáticamente.\n\n'
+
+    '5. Mis Apuntes:\n'
+    'Biblioteca con todos tus apuntes guardados. Seleccioná uno y usá los '
+    'botones para Abrir, Renombrar o Eliminar. '
+    'También podés hacer doble clic para abrirlo directamente.\n\n'
+
+    'Métodos de Estudio:\n\n'
+
+    '1. Apunte Libre:\n'
+    'Editor para tomar apuntes con formato: negrita, cursiva, '
+    'subrayado, colores, listas y alineación. '
+    'Ideal para apuntes de clase y resúmenes.\n\n'
+
+    '2. Sprint de Memoria:\n'
+    'Elegí cuántos minutos querés y hacé clic en "Empezar Reto". '
+    'Escribí todo lo que recordás del tema sin consultar nada. '
+    'Al terminar el tiempo, el editor se bloquea. Luego podés revisar tus '
+    'materiales y volver a activar el modo corrección para marcar en rojo '
+    'lo que faltó o estaba mal.\n\n'
+
+    '3. Matriz de Análisis:\n'
+    'Cuatro cuadrantes para estudiar en profundidad:\n'
+    '  1. Conocimiento previo: ¿qué sé antes de empezar?\n'
+    '  2. Dudas iniciales: ¿qué quiero aprender hoy?\n'
+    '  3. Síntesis: tu resumen real luego de estudiar.\n'
+    '  4. Dudas pendientes: lo que quedó sin resolver.\n\n'
+
+    '4. Flashcards:\n'
+    'Creá tarjetas con pregunta (frente) y respuesta (dorso). '
+    'En Modo Edición agregás y eliminás tarjetas. '
+    'En Modo Repaso las tarjetas se mezclan al azar: leés el frente, '
+    'pensás la respuesta y girás la tarjeta. '
+    '"Lo sabía" avanza; "No lo sabía" devuelve la tarjeta al final del mazo '
+    'para repasar de nuevo. El repaso termina cuando acertás todas.\n\n'
+
+    '¡Gracias por usar Entorno de Estudio UNPi!\n'
+    'Nyx y Candelaria.'
 )
 
 class PanelAcercaDe(wx.Panel):
@@ -47,7 +109,7 @@ class PanelAcercaDe(wx.Panel):
         content_sizer.Add(web, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 15)
 
         # --- Desarrolladoras ---
-        devs = wx.StaticText(self, label="Desarrolladoras:\n~ Paez Nyx Margot\n~ Ruggieri Candelaria")
+        devs = wx.StaticText(self, label="Desarrolladoras:\n~ Nyx Margot Paez\n~ Candelaria Ruggieri")
         font_devs = devs.GetFont()
         font_devs.SetPointSize(15)
         devs.SetFont(font_devs)
@@ -63,14 +125,18 @@ class PanelAcercaDe(wx.Panel):
         content_sizer.Add(self.btn_manual, 0, wx.ALL | wx.BOTTOM, 15)
 
 
-        # --- Texto del Manual (oculto al inicio) ---
-        texto_wrapeado = wordwrap(manualTexto, 580, wx.ClientDC(self))
-        self.manual_text = wx.StaticText(self, label=texto_wrapeado)
-        font_manual = self.manual_text.GetFont()
-        font_manual.SetPointSize(15)
-        self.manual_text.SetFont(font_manual)
-        self.manual_text.Hide()
-        content_sizer.Add(self.manual_text, 0, wx.ALL | wx.BOTTOM, 15)
+        # --- Texto del Manual con scroll (oculto al inicio) ---
+        self.manual_scroll = wx.TextCtrl(
+            self,
+            value=manualTexto,
+            size=(600, 300),
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_WORDWRAP | wx.BORDER_SIMPLE
+        )
+        font_manual = self.manual_scroll.GetFont()
+        font_manual.SetPointSize(11)
+        self.manual_scroll.SetFont(font_manual)
+        self.manual_scroll.Hide()
+        content_sizer.Add(self.manual_scroll, 0, wx.ALL | wx.BOTTOM, 15)
 
         # --- Ensamblaje ---
         h_sizer.AddStretchSpacer(1)
@@ -94,9 +160,11 @@ class PanelAcercaDe(wx.Panel):
         content_sizer.Add(copyright, 0, wx.ALL | wx.CENTER, 15)
 
     def on_manual(self, evt):
-        if self.manual_text.IsShown():
-            self.manual_text.Hide()
+        if self.manual_scroll.IsShown():
+            self.manual_scroll.Hide()
+            self.btn_manual.SetLabel("Manual de Usuario")
         else:
-            self.manual_text.Show()
+            self.manual_scroll.Show()
+            self.btn_manual.SetLabel("Cerrar manual")
         self.Layout()
         self.GetParent().Layout()

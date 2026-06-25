@@ -10,7 +10,7 @@ from vistas.acerca_de import PanelAcercaDe
 
 class MainFrame(wx.Frame):
     def __init__(self):
-        super().__init__(None, title="Entorno de Estudio UNPi", size=(1200, 750))
+        super().__init__(None, title="UNPi", size=(1200, 750))
         self.db = DatabaseManager()
         self.es_oscuro = False
         
