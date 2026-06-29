@@ -51,10 +51,10 @@ class DatabaseManager:
             self.cursor.execute("ALTER TABLE apuntes ADD COLUMN materia_id INTEGER REFERENCES materias(id)")
             self.conn.commit()
         except sqlite3.OperationalError:
-            # Si la columna ya existe, ignoramos el error
+            #Si la columna ya existe, ignoramos el error
             pass
 
-    # --- CRUD Apuntes ---
+    #CRUD Apuntes: Create, Read, Update, Delete (crear, leer, actualizar, eliminar)
     def guardar_apunte(self, nombre, metodo, xml, materia_id=None):
         self.cursor.execute(
             "INSERT INTO apuntes (nombre, metodo, contenido_xml, materia_id) VALUES (?, ?, ?, ?)", 
@@ -82,7 +82,7 @@ class DatabaseManager:
         self.cursor.execute("UPDATE apuntes SET nombre=? WHERE id=?", (nuevo_nombre, apunte_id))
         self.conn.commit()
 
-    # --- CRUD Materias ---
+    #CRUD Materias y Materiales de Clase
     def agregar_materia(self, nombre, profesor, link, horario, estado="Cursando"):
         self.cursor.execute(
             "INSERT INTO materias (nombre, profesor, link_clases, horario, estado) VALUES (?, ?, ?, ?, ?)",
@@ -121,7 +121,7 @@ class DatabaseManager:
         self.cursor.execute("DELETE FROM materiales_clase WHERE id=?", (material_id,))
         self.conn.commit()
 
-    # --- CRUD Planner ---
+    #CRUD Planner
     def guardar_bloque_planner(self, titulo, columna, fila, color):
         self.cursor.execute("INSERT INTO planificacion (titulo, columna, fila, color) VALUES (?, ?, ?, ?)", 
                             (titulo, columna, fila, color))

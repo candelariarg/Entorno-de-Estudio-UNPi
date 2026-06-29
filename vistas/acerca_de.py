@@ -73,17 +73,17 @@ class PanelAcercaDe(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent, -1)
 
-        # --- Sizer externo: centra verticalmente ---
+        #Sizer externo: centra verticalmente
         outer_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # --- Sizer medio: centra horizontalmente ---
+        #Sizer medio: centra horizontalmente
         h_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # --- Sizer del contenido ---
+        #Sizer del contenido
         content_sizer = wx.BoxSizer(wx.VERTICAL)
         content_sizer.SetMinSize((620, -1))
 
-        # --- Nombre y versión ---
+        #Nombre y versión
         nombre = wx.StaticText(self, label="'Entorno de Estudio UNPi'")
         font_titulo = nombre.GetFont()
         font_titulo.SetPointSize(24)
@@ -98,7 +98,7 @@ class PanelAcercaDe(wx.Panel):
         content_sizer.Add(version, 0, wx.ALIGN_CENTER_HORIZONTAL, 15)
 
 
-        # --- Sitio web ---
+        #Repositorio en GitHub
         web = wx.adv.HyperlinkCtrl(
             self, label="Repositorio en GitHub",
             url="https://github.com/candelariarg/Entorno-de-Estudio-UNPi.git"
@@ -108,7 +108,7 @@ class PanelAcercaDe(wx.Panel):
         web.SetFont(font_web)
         content_sizer.Add(web, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 15)
 
-        # --- Desarrolladoras ---
+        #Desarrolladoras
         devs = wx.StaticText(self, label="Desarrolladoras:\n~ Nyx Margot Paez\n~ Candelaria Ruggieri")
         font_devs = devs.GetFont()
         font_devs.SetPointSize(15)
@@ -117,7 +117,7 @@ class PanelAcercaDe(wx.Panel):
 
         content_sizer.Add(wx.StaticLine(self, size=(620, -1)), 0, wx.ALL, 8)
 
-        # --- Botón Manual ---
+        #Botón Manual
         self.btn_manual = wx.Button(self, label="Manual de Usuario", size=(170, 40))
         font_btn = self.btn_manual.GetFont()
         font_btn.SetPointSize(12)
@@ -125,7 +125,7 @@ class PanelAcercaDe(wx.Panel):
         content_sizer.Add(self.btn_manual, 0, wx.ALL | wx.BOTTOM, 15)
 
 
-        # --- Texto del Manual con scroll (oculto al inicio) ---
+        #Texto del Manual
         self.manual_scroll = wx.TextCtrl(
             self,
             value=manualTexto,
@@ -138,7 +138,7 @@ class PanelAcercaDe(wx.Panel):
         self.manual_scroll.Hide()
         content_sizer.Add(self.manual_scroll, 0, wx.ALL | wx.BOTTOM, 15)
 
-        # --- Ensamblaje ---
+        #Ensamblaje
         h_sizer.AddStretchSpacer(1)
         h_sizer.Add(content_sizer, 0, wx.EXPAND)
         h_sizer.AddStretchSpacer(1)
@@ -150,7 +150,7 @@ class PanelAcercaDe(wx.Panel):
         self.SetSizer(outer_sizer)
         self.Bind(wx.EVT_BUTTON, self.on_manual, self.btn_manual)
 
-        # --- Copyright ---
+        #Copyright
         copyright = wx.StaticText(
             self, label="(c) 2026 Equipo de desarrollo de Entorno de Estudio UNPi"
         )

@@ -16,7 +16,7 @@ class DraggableBlock(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.text = wx.StaticText(self, label=label)
         self.text.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-        # Mantenemos el texto negro para contrastar con los colores que elige el usuario
+        #Mantenemos el texto negro para contrastar con los colores que elige el usuario
         self.text.SetForegroundColour(wx.BLACK)
         sizer.Add(self.text, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 4)
         self.SetSizer(sizer)
@@ -107,7 +107,7 @@ class PanelPlanner(wx.Panel):
         self.canvas = wx.Panel(self)
         self.canvas.Bind(wx.EVT_PAINT, self.on_paint)
         self.canvas.Bind(wx.EVT_SIZE, self.on_resize)
-        # Evita el parpadeo en Windows/Linux al redibujar
+        #Evita el parpadeo en Windows/Linux al redibujar
         self.canvas.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         
         self.sizer.Add(toolbar, 0, wx.EXPAND | wx.ALL, 5)
@@ -145,23 +145,23 @@ class PanelPlanner(wx.Panel):
         self.canvas.Refresh()
 
     def on_paint(self, event):
-        # Usamos AutoBufferedPaintDC para evitar el parpadeo negro
+        #Usamos AutoBufferedPaintDC para evitar el parpadeo negro
         dc = wx.AutoBufferedPaintDC(self.canvas)
         
-        # Detectar de forma segura si estamos en modo oscuro
+        #Detectar de forma segura si estamos en modo oscuro
         try:
             es_oscuro = wx.GetTopLevelParent(self).es_oscuro
         except AttributeError:
             es_oscuro = False
             
-        # --- PALETA DINÁMICA DE LA GRILLA ---
+        #Paleta de colores según el modo
         bg_grid = wx.Colour(35, 35, 35) if es_oscuro else wx.WHITE
         bg_header = wx.Colour(50, 60, 80) if es_oscuro else wx.Colour(230, 240, 255)
         bg_time = wx.Colour(45, 45, 45) if es_oscuro else wx.Colour(240, 240, 240)
         line_color = wx.Colour(70, 70, 70) if es_oscuro else wx.Colour(220, 220, 220)
         text_color = wx.Colour(230, 230, 230) if es_oscuro else wx.BLACK
         
-        # Pintar el fondo base
+        #Pintar el fondo base
         w, h = self.canvas.GetSize()
         dc.SetBrush(wx.Brush(bg_grid))
         dc.SetPen(wx.TRANSPARENT_PEN)
@@ -177,7 +177,7 @@ class PanelPlanner(wx.Panel):
         dc.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         dc.SetTextForeground(text_color)
         
-        # 1. Dibujar Cabeceras de Días
+        #Dibujar cabeceras de días
         for i, dia in enumerate(dias):
             x = margin_left + i * col_w
             dc.SetBrush(wx.Brush(bg_header))
@@ -186,7 +186,7 @@ class PanelPlanner(wx.Panel):
             dc.DrawText(dia, x + 15, 8)
             dc.DrawLine(x, margin_top, x, h)
 
-        # 2. Dibujar Columna de Referencia de Horas
+        #Dibujar columna de referencia de horas
         for j, hora in enumerate(HORARIOS):
             y = margin_top + j * row_h
             dc.SetBrush(wx.Brush(bg_time))

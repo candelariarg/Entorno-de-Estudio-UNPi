@@ -4,9 +4,8 @@ import io
 
 rt.RichTextBuffer.AddHandler(rt.RichTextXMLHandler())
 
-# ==========================================
-# DIÁLOGO DE IMAGEN (TU FUNCIÓN PERSONALIZADA)
-# ==========================================
+#Dialogo para ajustar el tamaño de la imagen antes de insertarla:
+
 class DialogoAjusteImagen(wx.Dialog):
     def __init__(self, parent, img):
         super().__init__(parent, title="Ajustar Tamaño de Imagen")
@@ -49,9 +48,7 @@ class DialogoAjusteImagen(wx.Dialog):
         self.Layout()
 
 
-# ==========================================
-# EL EDITOR ENRIQUECIDO COMPLETO
-# ==========================================
+#Editor con barra de herramientas y funcionalidades de formato de texto, imágenes y tablas:
 class EditorEnriquecido(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -97,7 +94,7 @@ class EditorEnriquecido(wx.Panel):
         for b in [self.btn_img, self.btn_table]:
             self.toolbar1.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
 
-        # --- FILA 2: Sangrías y Espaciados (De la demo) ---
+        #Sangrías y Espaciados (de la demo)
         self.toolbar2 = wx.BoxSizer(wx.HORIZONTAL)
         
         self.btn_ind_less = wx.Button(self, label="⬅️ - Sangría", size=(-1, 35))
@@ -119,7 +116,7 @@ class EditorEnriquecido(wx.Panel):
         for b in [self.btn_ps_less, self.btn_ps_more]:
             self.toolbar2.Add(b, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
 
-        # --- ÁREA DE TEXTO ---
+        #Area de texto
         self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL | wx.HSCROLL | wx.BORDER_SUNKEN)
         self.rtc.SetMargins(15, 15)
         
@@ -129,7 +126,7 @@ class EditorEnriquecido(wx.Panel):
         self.sizer.Add(self.rtc, 1, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(self.sizer)
         
-        # --- BINDINGS DE EVENTOS ---
+        #Bindeos
         self.btn_bold.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyBoldToSelection())
         self.btn_italic.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyItalicToSelection())
         self.btn_under.Bind(wx.EVT_BUTTON, lambda e: self.rtc.ApplyUnderlineToSelection())
@@ -160,9 +157,7 @@ class EditorEnriquecido(wx.Panel):
 
 
 
-    # ==========================================
-    # FUNCIONES DE FORMATO (DE LA DEMO)
-    # ==========================================
+    #Funciones de Formato de Texto y Alineación (de la demo)
 
     def OnUndo(self, evt):
         if self.rtc.CanUndo():
@@ -260,9 +255,7 @@ class EditorEnriquecido(wx.Panel):
             attr.SetLineSpacing(20)
             self.rtc.SetStyle(r, attr)
 
-    # ==========================================
-    # FUNCIONES BASE DE TEXTO Y MEDIOS
-    # ==========================================
+    #Funciones de Formato de Color, Fuente, Imágenes y Tablas
     def OnHighlight(self, event):
         colorData = wx.ColourData()
         dlg = wx.ColourDialog(self, colorData)
@@ -306,27 +299,27 @@ class EditorEnriquecido(wx.Panel):
                 self.rtc.SetStyle(r, attr)
         dlg.Destroy()
 
-    # Cambiar la ruta para que detecte automáticamente variantes de "Imágenes"
+    #Cambiar la ruta para que detecte automáticamente la carpeta "Imágenes" del sistema
     def OnInsertImage(self, event):
         import os
         
-        # 1. Obtener la carpeta principal del usuario (ej: C:\Users\TuNombre o /home/usuario)
+        #Obtener la carpeta principal del usuario
         home_dir = os.path.expanduser("~")
         
-        # 2. Lista de posibles nombres que el sistema operativo le da a la carpeta
+        #Lista de posibles nombres que el sistema operativo le da a la carpeta
         posibles_nombres = ["Imágenes", "Imagenes", "Pictures", "Mis imágenes", "My Pictures"]
         
-        # Por defecto, si no encuentra la carpeta, abrirá en la carpeta principal del usuario
+        #Si no encuentra la carpeta, abrirá en la carpeta principal del usuario
         carpeta_img = home_dir 
         
-        # 3. Buscar cuál de esas carpetas existe realmente en la PC
+        #Buscar cuál de esas carpetas existe realmente en la PC
         for nombre in posibles_nombres:
             ruta_prueba = os.path.join(home_dir, nombre)
             if os.path.exists(ruta_prueba) and os.path.isdir(ruta_prueba):
                 carpeta_img = ruta_prueba
-                break # Encontramos la correcta, dejamos de buscar
+                break #Encontramos la correcta, dejamos de buscar
 
-        # 4. Abrir el cuadro de diálogo en la carpeta detectada
+        #Abrir el cuadro de diálogo en la carpeta detectada
         with wx.FileDialog(self, "Seleccionar Imagen", defaultDir=carpeta_img, wildcard="Imágenes (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg", style=wx.FD_OPEN) as dlg_file:
             if dlg_file.ShowModal() == wx.ID_OK:
                 img = wx.Image(dlg_file.GetPath())
@@ -347,9 +340,7 @@ class EditorEnriquecido(wx.Panel):
         if cols <= 0: return
         self.rtc.WriteTable(filas, cols)
 
-    # ==========================================
-    # UTILIDADES DE SISTEMA
-    # ==========================================
+    #Utilidades para bloquear la edición, activar modo corrección y obtener/cargar contenido en formato XML (formato que conserva el estilo y formato del texto, incluyendo imágenes y tablas)
     def bloquear_edicion(self, bloquear):
         self.rtc.SetEditable(not bloquear)
         for toolbar in [self.toolbar1, self.toolbar2]:

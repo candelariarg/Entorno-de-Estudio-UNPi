@@ -27,7 +27,7 @@ class PanelFlashcards(wx.Panel):
         self.toolbar.Add(self.btn_modo_editar, 0, wx.RIGHT, 10)
         self.toolbar.Add(self.btn_modo_repaso, 0)
         
-        # MODO EDICIÓN
+        #Modo edición
         self.panel_editar = wx.Panel(self)
         ed_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -58,7 +58,7 @@ class PanelFlashcards(wx.Panel):
         ed_sizer.Add(btn_del, 0, wx.ALL | wx.ALIGN_RIGHT, 10)
         self.panel_editar.SetSizer(ed_sizer)
         
-        # MODO REPASO
+        #Modo repaso
         self.panel_repaso = wx.Panel(self)
         rep_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -66,7 +66,7 @@ class PanelFlashcards(wx.Panel):
         t_sizer = wx.BoxSizer(wx.VERTICAL)
         self.lbl_tipo = wx.StaticText(self.tarjeta, label="FRENTE")
         
-        # Color neutro para el label tipo (que se vea bien en claro y oscuro)
+        #Color neutro para el label tipo (que se vea bien en claro y oscuro)
         self.lbl_tipo.SetForegroundColour(wx.Colour(120, 120, 120)) 
         
         self.lbl_texto_tarjeta = wx.StaticText(self.tarjeta, label="Agrega tarjetas primero.")
@@ -124,7 +124,7 @@ class PanelFlashcards(wx.Panel):
     def actualizar_lista(self):
         self.lista.DeleteAllItems()
         
-        # Recuperamos la paleta de modo oscuro desde el frame principal
+        #Recuperamos la paleta de modo oscuro desde el frame principal
         try:
             top_level = wx.GetTopLevelParent(self)
             es_oscuro = top_level.es_oscuro
@@ -138,7 +138,7 @@ class PanelFlashcards(wx.Panel):
             self.lista.InsertItem(i, c["q"])
             self.lista.SetItem(i, 1, c["a"])
             
-            # Colorear la fila para evadir el bug de GTK en modo oscuro
+            #Colorear la fila para evadir el bug de GTK en modo oscuro
             self.lista.SetItemTextColour(i, fg)
             self.lista.SetItemBackgroundColour(i, bg)
 
@@ -172,9 +172,9 @@ class PanelFlashcards(wx.Panel):
             es_oscuro = False
             
         if es_oscuro:
-            return wx.Colour(60, 60, 60), wx.Colour(80, 80, 60) # Gris oscuro / Gris amarillento
+            return wx.Colour(60, 60, 60), wx.Colour(80, 80, 60) #Gris oscuro/Gris amarillento
         else:
-            return wx.WHITE, wx.Colour(255, 255, 230) # Blanco / Amarillito claro
+            return wx.WHITE, wx.Colour(255, 255, 230) #Blanco/Amarillito claro
 
     def mostrar_frente(self):
         self.mostrando_respuesta = False

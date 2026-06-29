@@ -12,7 +12,7 @@ class PanelApuntes(wx.Panel):
         
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        # Cabecera
+        #Cabecera
         top_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_titulo = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
         self.txt_titulo.SetFont(wx.Font(16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
@@ -27,11 +27,11 @@ class PanelApuntes(wx.Panel):
         top_sizer.Add(self.lbl_metodo, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
         top_sizer.Add(btn_guardar, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
         
-        # Contenedor Dinámico
+        #Contenedor Dinámico
         self.area_trabajo = wx.Panel(self)
         self.area_sizer = wx.BoxSizer(wx.VERTICAL) 
         
-        # Cartel de bienvenida
+        #Cartel de bienvenida
         self.panel_vacio = wx.Panel(self.area_trabajo)
         vacio_sizer = wx.BoxSizer(wx.VERTICAL)
         lbl_vacio = wx.StaticText(self.panel_vacio, label="👈 Ve a 'Inicio' o 'Mis Apuntes' y selecciona un tema para estudiar.")
@@ -42,7 +42,7 @@ class PanelApuntes(wx.Panel):
         vacio_sizer.AddStretchSpacer()
         self.panel_vacio.SetSizer(vacio_sizer)
         
-        # Instanciar todas las vistas
+        #Instanciar todas las vistas
         self.v_libre = EditorEnriquecido(self.area_trabajo)
         self.v_sprint = PanelSprint(self.area_trabajo)
         self.v_matriz = PanelMatriz(self.area_trabajo)
@@ -53,7 +53,7 @@ class PanelApuntes(wx.Panel):
         self.v_matriz.Hide()
         self.v_flash.Hide()
         
-        # Agregar al Sizer
+        #Agregar al Sizer
         self.area_sizer.Add(self.panel_vacio, 1, wx.EXPAND)
         self.area_sizer.Add(self.v_libre, 1, wx.EXPAND)
         self.area_sizer.Add(self.v_sprint, 1, wx.EXPAND)
@@ -94,7 +94,7 @@ class PanelApuntes(wx.Panel):
             self.v_flash.load_data(contenido)
         else:
             self.v_libre.Show()
-            self.v_libre.load_xml(contenido) # <--- ¡AQUÍ ESTABA EL ERROR! (Antes decía load_data)
+            self.v_libre.load_xml(contenido)
             
         self.area_trabajo.Layout()
         self.main_sizer.Layout()

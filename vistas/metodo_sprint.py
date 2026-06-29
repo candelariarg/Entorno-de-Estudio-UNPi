@@ -54,7 +54,7 @@ class PanelSprint(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.on_tick, self.timer)
         self.tiempo_restante = 0
 
-        # Asignar un color inicial seguro y luego leer el tema real
+        #Asignar un color inicial seguro y luego leer el tema real
         self.panel_timer.SetBackgroundColour(wx.Colour(230, 240, 255))
         wx.CallAfter(self.ajustar_colores)
 
@@ -108,7 +108,7 @@ class PanelSprint(wx.Panel):
     def on_ir_materias(self, event):
         try:
             notebook = self.GetTopLevelParent().notebook
-            # El índice 1 corresponde a la pestaña "Materias"
+            #El índice 1 corresponde a la pestaña "Materias"
             notebook.SetSelection(1)
         except: 
             pass

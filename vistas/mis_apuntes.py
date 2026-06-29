@@ -6,13 +6,13 @@ class PanelMisApuntes(wx.Panel):
         self.db = db
         self.main_frame = main_frame
         
-        # Sizer principal con margen estándar
+        #Sizer principal con margen estándar
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         
         lbl_titulo = wx.StaticText(self, label="Mis Apuntes Guardados")
         lbl_titulo.SetFont(wx.Font(16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         
-        # Toolbar
+        #Toolbar
         toolbar = wx.BoxSizer(wx.HORIZONTAL)
         btn_abrir = wx.Button(self, label="✏️ Abrir Apunte")
         btn_renombrar = wx.Button(self, label="🔄 Renombrar")
@@ -21,13 +21,13 @@ class PanelMisApuntes(wx.Panel):
         toolbar.Add(btn_renombrar, 0, wx.RIGHT, 10)
         toolbar.Add(btn_eliminar, 0, wx.RIGHT, 10)
         
-        # Lista estándar
+        #Lista estándar
         self.lista = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
         self.lista.InsertColumn(0, "Título", width=400)
         self.lista.InsertColumn(1, "Método Utilizado", width=150)
         self.lista.InsertColumn(2, "Fecha de Creación", width=150)
         
-        # Layout base que sabemos que funciona en los otros paneles
+        #Layout base que sabemos que funciona en los otros paneles
         main_sizer.Add(lbl_titulo, 0, wx.ALL, 20)
         main_sizer.Add(toolbar, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 20)
         main_sizer.Add(self.lista, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 20)

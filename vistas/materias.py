@@ -1,7 +1,7 @@
 import wx
 import os
-import subprocess
-import webbrowser  # NUEVO: Librería nativa de Python para abrir el navegador web
+import subprocess #Librería nativa de Python para abrir archivos con la aplicación predeterminada del sistema operativo
+import webbrowser  #Librería nativa de Python para abrir el navegador web
 
 class PanelMaterias(wx.Panel):
     def __init__(self, parent, db, main_frame):
@@ -12,10 +12,10 @@ class PanelMaterias(wx.Panel):
         
         splitter = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE | wx.SP_3D)
         
-        # --- Panel Izquierdo (Árbol) ---
+        #Panel Izquierdo
         self.left_panel = wx.Panel(splitter)
         left_sizer = wx.BoxSizer(wx.VERTICAL)
-        # TreeCtrl para mostrar materias
+        #TreeCtrl para mostrar materias
         self.tree = wx.TreeCtrl(self.left_panel, style=wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT | wx.TR_NO_LINES)
         self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_materia_seleccionada)
         btn_nueva = wx.Button(self.left_panel, label="+ Añadir Materia")
@@ -26,7 +26,7 @@ class PanelMaterias(wx.Panel):
         left_sizer.Add(btn_nueva, 0, wx.EXPAND | wx.ALL, 5)
         self.left_panel.SetSizer(left_sizer)
         
-        # --- Panel Derecho (Archivos) ---
+        #Panel Derecho
         self.right_panel = wx.Panel(splitter)
         right_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -39,8 +39,8 @@ class PanelMaterias(wx.Panel):
         self.txt_horario = wx.TextCtrl(self.right_panel)
         self.combo_estado = wx.ComboBox(self.right_panel, choices=["Cursando", "Finalizada"], style=wx.CB_READONLY)
         
-        # --- NUEVO: SISTEMA DE ENLACES CON BOTÓN ---
-        # Le quitamos el formato multilínea para que sea una simple barra de URL
+        #Enlace para abrir el navegador web con el link guardado
+        #Le quitamos el formato multilínea para que sea una simple barra de URL
         self.txt_links = wx.TextCtrl(self.right_panel) 
         
         self.btn_abrir_link = wx.Button(self.right_panel, label="🌐 Ir al Link")
@@ -49,14 +49,14 @@ class PanelMaterias(wx.Panel):
         link_sizer = wx.BoxSizer(wx.HORIZONTAL)
         link_sizer.Add(self.txt_links, 1, wx.EXPAND | wx.RIGHT, 5)
         link_sizer.Add(self.btn_abrir_link, 0)
-        # ------------------------------------------
+        
         
         form_sizer.Add(wx.StaticText(self.right_panel, label="Profesor/a:"), 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.txt_profesor, 1, wx.EXPAND)
         form_sizer.Add(wx.StaticText(self.right_panel, label="Días y Horarios:"), 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.txt_horario, 1, wx.EXPAND)
         form_sizer.Add(wx.StaticText(self.right_panel, label="Link (Zoom/Meet/Drive):"), 0, wx.ALIGN_CENTER_VERTICAL)
-        form_sizer.Add(link_sizer, 1, wx.EXPAND) # Agregamos el Sizer combinado aquí
+        form_sizer.Add(link_sizer, 1, wx.EXPAND) #Agregamos el sizer combinado
         form_sizer.Add(wx.StaticText(self.right_panel, label="Estado:"), 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.combo_estado, 1, wx.EXPAND)
         
@@ -75,7 +75,7 @@ class PanelMaterias(wx.Panel):
         self.list_ctrl.InsertColumn(2, "Fecha", width=120)
         self.list_ctrl.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_abrir_archivo)
         
-        # Diccionarios de datos para la lista
+        #Diccionarios de datos para la lista
         self.rutas_archivos = {}
         self.ids_archivos = {}
         self.items_es_apunte = {}
@@ -89,7 +89,7 @@ class PanelMaterias(wx.Panel):
         self.right_panel.SetSizer(right_sizer)
         self.right_panel.Disable()
         
-        # Ensamblaje del splitter
+        #Ensamblaje del splitter
         splitter.SplitVertically(self.left_panel, self.right_panel, 250)
         splitter.SetSashGravity(0.0) 
         
@@ -99,7 +99,7 @@ class PanelMaterias(wx.Panel):
         
         self.cargar_arbol()
         
-        # FIX: Fuerza al Splitter a acomodarse al instante
+        #Fuerza al Splitter a acomodarse al instante
         wx.CallAfter(self.finalizar_layout)
 
     def finalizar_layout(self):
@@ -108,11 +108,11 @@ class PanelMaterias(wx.Panel):
         self.Layout()
         self.tree.Refresh()
 
-    # --- NUEVO: FUNCIÓN PARA ABRIR NAVEGADOR ---
+    #Funcion para abrir el link web guardado en la materia, si es que hay alguno
     def on_abrir_link_web(self, event):
         url = self.txt_links.GetValue().strip()
         if url:
-            # Si el usuario olvidó poner 'http://' o 'https://', el código lo arregla por él
+            #Si el usuario olvidó poner 'http://' o 'https://', el código lo arregla
             if not url.startswith('http://') and not url.startswith('https://'):
                 url = 'https://' + url
             webbrowser.open(url)
@@ -123,7 +123,7 @@ class PanelMaterias(wx.Panel):
         self.tree.DeleteAllItems()
         self.root = self.tree.AddRoot("Materias")
         for row in self.db.obtener_materias():
-            mat = dict(row) # <-- CONVERTIMOS A DICCIONARIO AQUÍ
+            mat = dict(row)
             es_oscuro = self.main_frame.es_oscuro
             color = wx.Colour(17, 46, 107) if mat.get('estado') == "Finalizada" else wx.Colour(0, 85, 150)
             if es_oscuro: 
@@ -137,7 +137,7 @@ class PanelMaterias(wx.Panel):
     def on_nueva_materia(self, event):
         nombre = wx.GetTextFromUser("Nombre de la materia:", "Nueva Materia")
         if nombre.strip():
-            # Pasamos valores vacíos iniciales
+            #Pasamos valores vacíos iniciales
             self.db.agregar_materia(nombre, "", "", "", "Cursando")
             self.cargar_arbol()
 
@@ -148,13 +148,13 @@ class PanelMaterias(wx.Panel):
             return
         self.materia_actual_id = self.tree.GetItemData(item)
         
-        # <-- CONVERTIMOS A DICCIONARIO EN LA BÚSQUEDA -->
+        #Cargar los datos de la materia seleccionada desde la base de datos
         materia_data = next((dict(m) for m in self.db.obtener_materias() if m['id'] == self.materia_actual_id), None)
         
         if materia_data:
             self.right_panel.Enable()
             self.lbl_titulo.SetValue(materia_data['nombre'])
-            # Usamos 'or ""' para evitar que se escriba "None" si el campo está vacío en la base de datos
+            #Usamos 'or ""' para evitar que se escriba "None" si el campo está vacío en la base de datos
             self.txt_profesor.SetValue(materia_data.get('profesor') or '')
             self.txt_horario.SetValue(materia_data.get('horario') or '')
             self.txt_links.SetValue(materia_data.get('link_clases') or '')
@@ -170,7 +170,7 @@ class PanelMaterias(wx.Panel):
                 self.txt_links.GetValue(),
                 self.txt_horario.GetValue()
             )
-            # Actualizamos también el estado de la materia
+            #Actualizamos también el estado de la materia
             estado_actual = self.combo_estado.GetValue()
             self.db.cursor.execute("UPDATE materias SET estado=? WHERE id=?", (estado_actual, self.materia_actual_id))
             self.db.conn.commit()
@@ -182,7 +182,7 @@ class PanelMaterias(wx.Panel):
         with wx.FileDialog(self, "Seleccionar Material", wildcard="*.*", style=wx.FD_OPEN) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 ruta = dlg.GetPath()
-                # Tu db manager solo pide materia_id y ruta, él saca el nombre
+                #Guardamos el archivo en la base de datos vinculado a la materia actual
                 self.db.agregar_material(self.materia_actual_id, ruta)
                 self.cargar_archivos()
 
@@ -192,7 +192,7 @@ class PanelMaterias(wx.Panel):
         self.ids_archivos.clear()
         self.items_es_apunte = {}
         
-        # FIX: Colores de alto contraste
+        #Colores de alto contraste
         try:
             top_level = wx.GetTopLevelParent(self)
             es_oscuro = top_level.es_oscuro
@@ -205,7 +205,7 @@ class PanelMaterias(wx.Panel):
         try:
             indice_fila = 0
             
-            # 1. Cargar Archivos Físicos
+            #Cargar Archivos Físicos
             for mat in self.db.obtener_materiales(self.materia_actual_id):
                 self.list_ctrl.InsertItem(indice_fila, "📄 " + mat['nombre'])
                 self.list_ctrl.SetItem(indice_fila, 1, mat['tipo'])
@@ -220,7 +220,7 @@ class PanelMaterias(wx.Panel):
                 self.list_ctrl.SetItemBackgroundColour(indice_fila, bg)
                 indice_fila += 1
                 
-            # 2. Cargar Apuntes de esta Materia
+            #Cargar Apuntes de esta Materia
             self.db.cursor.execute("SELECT id, nombre, metodo, fecha_creacion FROM apuntes WHERE materia_id=?", (self.materia_actual_id,))
             for apunte in self.db.cursor.fetchall():
                 self.list_ctrl.InsertItem(indice_fila, "📝 " + apunte['nombre'])

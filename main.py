@@ -17,7 +17,7 @@ class MainFrame(wx.Frame):
         main_panel = wx.Panel(self)
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        # --- Barra Superior (Entorno de Estudio UNPi) ---
+        #Barra Superior (Entorno de Estudio UNPi)
         self.top_bar = wx.Panel(main_panel, style=wx.BORDER_NONE)
         self.top_bar.SetBackgroundColour(COLOR_NAVY)
         top_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -25,22 +25,22 @@ class MainFrame(wx.Frame):
         self.titulo_app = wx.StaticText(self.top_bar, label="Entorno de Estudio UNPi")
         self.titulo_app.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         
-        # Botón de tema con Ícono Nativo
+        #Botón de tema con icono nativo
         self.btn_tema = wx.Button(self.top_bar, label=" Tema Oscuro")
         try:
             self.btn_tema.SetBitmap(wx.ArtProvider.GetBitmap(wx.ART_TIP, wx.ART_BUTTON, (16, 16)))
         except: pass
         self.btn_tema.Bind(wx.EVT_BUTTON, self.alternar_tema)
         
-        # Ensamblaje de la barra superior con el espacio extra que habíamos logrado
+        #Ensamblaje de la barra superior con el espacio extra que habíamos logrado
         top_sizer.Add(self.titulo_app, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 15)
         top_sizer.Add(self.btn_tema, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT | wx.TOP | wx.BOTTOM, 15)
         self.top_bar.SetSizer(top_sizer)
         
-        # --- Pestañas Superiores (Con Íconos Nativos) ---
+        #Pestañas Superiores (con iconos nativos)
         self.notebook = wx.Notebook(main_panel)
         
-        # 1. Creamos la lista de imágenes nativas del sistema operativo
+        #Creamos la lista de imágenes nativas del sistema operativo
         image_list = wx.ImageList(16, 16)
         idx_inicio = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_GO_HOME, wx.ART_OTHER, (16, 16)))
         idx_materias = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, (16, 16)))
@@ -49,7 +49,7 @@ class MainFrame(wx.Frame):
         idx_mis_apuntes = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_REPORT_VIEW, wx.ART_OTHER, (16, 16)))
         idx_acerca_de = image_list.Add(wx.ArtProvider.GetBitmap(wx.ART_INFORMATION, wx.ART_OTHER, (16, 16)))
 
-        # 2. Asignamos la lista de imágenes al notebook
+        #Asignamos la lista de imágenes al notebook
         self.notebook.AssignImageList(image_list)
         
         self.tab_home = PanelHome(self.notebook, self.db, self)
@@ -59,7 +59,7 @@ class MainFrame(wx.Frame):
         self.tab_mis_apuntes = PanelMisApuntes(self.notebook, self.db, self)
         self.tab_acerca_de = PanelAcercaDe(self.notebook)
 
-        # 3. Agregamos las páginas vinculando el ID de cada imagen
+        #Agregamos las páginas vinculando el ID de cada imagen
         self.notebook.AddPage(self.tab_home, "Inicio", imageId=idx_inicio)
         self.notebook.AddPage(self.tab_materias, "Materias", imageId=idx_materias)
         self.notebook.AddPage(self.tab_planner, "Planner", imageId=idx_planner)
@@ -67,7 +67,7 @@ class MainFrame(wx.Frame):
         self.notebook.AddPage(self.tab_mis_apuntes, "Mis Apuntes", imageId=idx_mis_apuntes)
         self.notebook.AddPage(self.tab_acerca_de, "Acerca de", imageId=idx_acerca_de)
 
-        # Ensamblaje Principal
+        #Ensamblaje Principal
         main_sizer.Add(self.top_bar, 0, wx.EXPAND)
         main_sizer.Add(self.notebook, 1, wx.EXPAND)
         main_panel.SetSizer(main_sizer)
